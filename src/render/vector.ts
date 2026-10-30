@@ -666,6 +666,57 @@ function survivor(): Texture {
   });
 }
 
+/** Dvere domu: dosky s okovaním a morovým krížom; otvorené sú len tmavý otvor. */
+function door(open: boolean): Texture {
+  return paint(TILE, TILE, (ctx) => {
+    if (open) {
+      ctx.fillStyle = '#050403';
+      ctx.fillRect(2, 0, 12, 16);
+      return;
+    }
+    ctx.fillStyle = '#3a2a1c';
+    ctx.fillRect(1.5, 0, 13, 16);
+    ctx.strokeStyle = '#1a120c';
+    for (const x of [5, 8, 11]) line(ctx, x, 0.5, x, 15.5, 0.5);
+    ctx.fillStyle = '#14100c';
+    ctx.fillRect(1.5, 3, 13, 1.4);
+    ctx.fillRect(1.5, 11.5, 13, 1.4);
+    // Zámka.
+    ctx.fillStyle = '#c8b070';
+    circle(ctx, 11.6, 8.2, 0.9);
+    ctx.strokeStyle = 'rgba(170,40,30,0.9)';
+    line(ctx, 7, 5.4, 7, 10.6, 1);
+    line(ctx, 4.6, 7.6, 9.4, 7.6, 1);
+  });
+}
+
+/** Kľúč: veľký kovaný kľúč, leskne sa. */
+function key(): Texture {
+  return paint(10, 6, (ctx) => {
+    ctx.shadowColor = '#f4e2a8';
+    ctx.shadowBlur = 6;
+    ctx.strokeStyle = '#e8c860';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(2.6, 3, 1.6, 0, Math.PI * 2);
+    ctx.stroke();
+    line(ctx, 4.2, 3, 9, 3, 1);
+    line(ctx, 7.6, 3, 7.6, 4.8, 0.9);
+    line(ctx, 8.8, 3, 8.8, 4.4, 0.9);
+  });
+}
+
+/** Groš: malá strieborná minca s krížom. */
+function coin(): Texture {
+  return paint(5, 5, (ctx) => {
+    ctx.fillStyle = '#d8d0b8';
+    circle(ctx, 2.5, 2.5, 1.9);
+    ctx.strokeStyle = '#6a604c';
+    line(ctx, 2.5, 1.4, 2.5, 3.6, 0.4);
+    line(ctx, 1.4, 2.5, 3.6, 2.5, 0.4);
+  });
+}
+
 /** Liečivé byliny: zväzok bledozelených lístkov, slabo žiari. */
 function herb(): Texture {
   return paint(9, 10, (ctx) => {
@@ -1386,6 +1437,9 @@ export const vectorArt: Art = {
   sign,
   lightTile,
   rat,
+  door,
+  key,
+  coin,
   survivor,
   nest,
   cane,

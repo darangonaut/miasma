@@ -206,14 +206,14 @@ describe('uloženie', () => {
   it('odomkne ďalší level a drží najlepšie skóre', async () => {
     const { parseSave, recordLevel } = await import('@/game/save');
     let save = parseSave(null);
-    const r = { fireflies: 5, crystals: 1, survivors: 1, nests: 2, herbs: 1 };
+    const r = { fireflies: 5, crystals: 1, survivors: 1, nests: 2, herbs: 1, coins: 0 };
     save = recordLevel(save, 0, 'a', r);
     // Prvé prejdenie: 2 za preživšieho, 1 za relikviu, 1 za každé hniezdo.
     expect(save.coins).toBe(5);
     save = recordLevel(save, 0, 'a', { ...r, fireflies: 3, crystals: 0, survivors: 1 });
     expect(save.coins).toBe(5);
     expect(save.unlocked).toBe(1);
-    expect(save.best.a).toEqual({ fireflies: 5, crystals: 1, survivors: 1 });
+    expect(save.best.a).toEqual({ fireflies: 5, crystals: 1, survivors: 1, coins: 0 });
     expect(parseSave(JSON.stringify(save))).toEqual(save);
     expect(parseSave('nezmysel').unlocked).toBe(0);
     const { buy } = await import('@/game/save');
@@ -702,6 +702,20 @@ describe('nové svety', () => {
     expect(ending(2, 20)).toBe('bad');
     expect(secretUnlocked(16, 16)).toBe(true);
     expect(secretUnlocked(15, 16)).toBe(false);
+  });
+
+  it('kľúč otvorí zamknuté dvere, groše sa zbierajú', () => {
+    const rows = [' P  k  $   D   E', '################'];
+    const locked = make([' P         D   E', '################']);
+    run(locked, 3, { right: true });
+    expect(locked.player.x).toBeLessThan(11 * TILE);
+    const game = make(rows);
+    const events = run(game, 4, { right: true });
+    expect(events.some((e) => e.type === 'key')).toBe(true);
+    expect(events.some((e) => e.type === 'doorOpen')).toBe(true);
+    expect(game.coinCount).toBe(1);
+    expect(game.keysCarried).toBe(0);
+    expect(game.player.x).toBeGreaterThan(11 * TILE);
   });
 
   it('mimo cintorína nefúka', () => {

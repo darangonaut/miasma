@@ -32,6 +32,9 @@ export interface Art {
   sign(): Texture;
   lightTile(): Texture;
   rat(frame: number): Texture;
+  door(open: boolean): Texture;
+  key(): Texture;
+  coin(): Texture;
   survivor(): Texture;
   nest(ash: boolean): Texture;
   cane(): Texture;

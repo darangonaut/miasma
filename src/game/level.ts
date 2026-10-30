@@ -16,6 +16,8 @@
  *   h  liečivé byliny (vyliečia nákazu)
  *   n  morové hniezdo (treba spáliť, inak sa hranica nezapáli)
  *   u  preživší (prosí o bylinu; bez nej sa pri zvone premení)
+ *   k  kľúč                 D  zamknuté dvere (otvorí ich kľúč)
+ *   $  groš (na lekáreň)
  *   H  visiaca plošina ↔    V  visiaca plošina ↕ (2 políčka široká, 4 políčka dráha)
  *   1–9  odkaz na stene s radou
  */
@@ -32,6 +34,7 @@ export enum Tile {
   Ice,
   Bounce,
   Barricade,
+  Door,
 }
 
 export type World = 'quarter' | 'catacombs' | 'pits' | 'cathedral';
@@ -82,6 +85,8 @@ export interface Level {
   herbs: Point[];
   nests: Point[];
   survivors: Point[];
+  keys: Point[];
+  coins: Point[];
   /** Políčka s miazmou (stĺpec, riadok). */
   fog: { col: number; row: number }[];
   icicles: Point[];
@@ -100,6 +105,7 @@ const TILES: Record<string, Tile> = {
   i: Tile.Ice,
   b: Tile.Bounce,
   x: Tile.Barricade,
+  D: Tile.Door,
 };
 
 /** Stred políčka v pixeloch. */
@@ -129,6 +135,8 @@ export function parseLevel(def: LevelDef): Level {
     herbs: [],
     nests: [],
     survivors: [],
+    keys: [],
+    coins: [],
     fog: [],
     icicles: [],
     movers: [],
@@ -158,6 +166,8 @@ export function parseLevel(def: LevelDef): Level {
       else if (ch === 'h') level.herbs.push(c);
       else if (ch === 'n') level.nests.push(c);
       else if (ch === 'u') level.survivors.push(c);
+      else if (ch === 'k') level.keys.push(c);
+      else if (ch === '$') level.coins.push(c);
       else if (ch === '~') level.fog.push({ col: x, row: y });
       else if (ch === 'S') level.bigShades.push(c);
       else if (ch === 'v') level.icicles.push(c);

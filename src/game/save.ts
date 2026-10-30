@@ -12,7 +12,7 @@ export interface SaveData {
   /** Index najvyššieho odomknutého levelu. */
   unlocked: number;
   /** Najviac nazbieraných uhlíkov, relikvií a zachránených preživších podľa id levelu. */
-  best: Record<string, { fireflies: number; crystals: number; survivors: number }>;
+  best: Record<string, { fireflies: number; crystals: number; survivors: number; coins: number }>;
   /** Groše na lekáreň. */
   coins: number;
   perks: Perks;
@@ -50,6 +50,7 @@ export function parseSave(text: string | null): SaveData {
             fireflies: v.fireflies,
             crystals: v.crystals,
             survivors: typeof v.survivors === 'number' ? v.survivors : 0,
+            coins: typeof v.coins === 'number' ? v.coins : 0,
           };
       }
     }
@@ -77,6 +78,8 @@ export interface LevelResult {
   nests: number;
   /** Byliny, ktoré lekárovi ostali v brašni. */
   herbs: number;
+  /** Nájdené groše (v pivniciach a domoch). */
+  coins: number;
 }
 
 /**
@@ -89,6 +92,7 @@ export function levelCoins(save: SaveData, id: string, r: LevelResult): number {
   return (
     Math.max(0, r.survivors - (prev?.survivors ?? 0)) * 2 +
     Math.max(0, r.crystals - (prev?.crystals ?? 0)) +
+    Math.max(0, r.coins - (prev?.coins ?? 0)) +
     (first ? r.nests : 0)
   );
 }
@@ -107,6 +111,7 @@ export function recordLevel(save: SaveData, index: number, id: string, r: LevelR
         fireflies: Math.max(prev?.fireflies ?? 0, r.fireflies),
         crystals: Math.max(prev?.crystals ?? 0, r.crystals),
         survivors: Math.max(prev?.survivors ?? 0, r.survivors),
+        coins: Math.max(prev?.coins ?? 0, r.coins),
       },
     },
   };

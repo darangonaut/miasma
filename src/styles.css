@@ -671,6 +671,12 @@ button.big:hover {
   opacity: 0.35;
 }
 
+.coins-found,
+.key-icon {
+  margin-left: 10px;
+  color: var(--ink);
+}
+
 .herbs {
   margin-left: 10px;
   color: var(--verdigris);

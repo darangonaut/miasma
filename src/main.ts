@@ -338,6 +338,7 @@ function finishLevel(g: Game): void {
     survivors: g.savedCount,
     nests: g.nests.length,
     herbs: g.herbsCarried,
+    coins: g.coinCount,
   };
   const before = readSave();
   const earned = levelCoins(before, def.id, result);
@@ -463,6 +464,8 @@ function onEvents(events: GameEvent[]): void {
       showToast(t(DEATHS[e.cause]!));
     } else if (e.type === 'crystal') {
       openDiary(t('diaryTitle'), t(`page${levelIndex + 1}` as Key));
+    } else if (e.type === 'key') {
+      showToast(t('keyToast'));
     } else if (e.type === 'saved') {
       showToast(t('savedToast'));
     } else if (e.type === 'turned') {
@@ -493,6 +496,8 @@ function updateHud(g: Game): void {
   $('.nests').textContent = g.nests.length ? `♨ ${g.nestsBurnt}/${g.nests.length}` : '';
   $('.fireflies').textContent = `✶ ${g.fireflyCount}/${g.fireflies.length}`;
   $('.herbs').textContent = `❦ ${g.herbsCarried}/${HERB_MAX}`;
+  $('.coins-found').textContent = g.coins.length ? `₰ ${g.coinCount}` : '';
+  $('.key-icon').textContent = g.keysCarried ? `⚷ ${g.keysCarried}` : '';
   $('.herb-btn').classList.toggle('empty', g.herbsCarried === 0);
   $('.crystals').textContent = g.crystals.length ? `❧ ${g.crystalCount}/${g.crystals.length}` : '';
   // Morový zvon: pásik sa plní do ďalšieho úderu, pri besnení sa vyprázdňuje.

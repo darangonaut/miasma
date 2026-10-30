@@ -124,6 +124,10 @@ export class Renderer {
   private barricadeSprites: { sprite: Sprite; fire: Sprite }[] = [];
   private herbSprites: Sprite[] = [];
   private survivorSprites: Sprite[] = [];
+  private doorSprites: { sprite: Sprite; index: number }[] = [];
+  private keySprites: Sprite[] = [];
+  private coinSprites: Sprite[] = [];
+  private doorTex: Texture[] = [];
   private nestSprites: { sprite: Sprite; fire: Sprite[] }[] = [];
   /** Chumáče miazmy: jeden na políčko, mierne sa vlnia. */
   private fogSprites: { sprite: Sprite; index: number; seed: number }[] = [];
@@ -375,6 +379,32 @@ export class Renderer {
       });
       return { sprite, fire };
     });
+    if (!this.doorTex.length) this.doorTex = [art.door(false), art.door(true)];
+    this.doorSprites = [];
+    for (let row = 0; row < level.height; row++)
+      for (let col = 0; col < level.width; col++) {
+        if (tileAt(level, col, row) !== Tile.Door) continue;
+        const sprite = new Sprite(this.doorTex[0]);
+        sprite.position.set(col * TILE, row * TILE);
+        this.level.addChild(sprite);
+        this.doorSprites.push({ sprite, index: row * level.width + col });
+      }
+    const keyTex = art.key();
+    this.keySprites = game.keys.map((k) => {
+      const s = new Sprite(keyTex);
+      s.anchor.set(0.5);
+      s.position.set(k.x, k.y);
+      this.above.addChild(s);
+      return s;
+    });
+    const coinTex = art.coin();
+    this.coinSprites = game.coins.map((c) => {
+      const s = new Sprite(coinTex);
+      s.anchor.set(0.5);
+      s.position.set(c.x, c.y + 3);
+      this.actors.addChild(s);
+      return s;
+    });
     const survivorTex = art.survivor();
     this.survivorSprites = game.survivors.map((s) => {
       const sprite = new Sprite(survivorTex);
@@ -576,6 +606,16 @@ export class Renderer {
         case 'nestBurnt':
           this.burst(e.x, e.y, 18, C.shadeInner, 40, false);
           this.burst(e.x, e.y, 10, C.flame, 50, true);
+          break;
+        case 'key':
+          this.burst(e.x, e.y, 14, 0xf0d870, 50, true);
+          break;
+        case 'coin':
+          this.burst(e.x, e.y, 6, 0xe8e0c8, 30, true);
+          break;
+        case 'doorOpen':
+          this.shake = 1.5;
+          this.burst(e.x, e.y, 10, C.shadeInner, 30, false);
           break;
         case 'saved':
           this.burst(e.x, e.y, 20, 0xfff0d0, 50, true);
@@ -911,6 +951,18 @@ export class Renderer {
       this.above.addChild(eyes);
       this.ghoulSprites.push({ body, eyes });
     }
+    for (const d of this.doorSprites)
+      d.sprite.texture = this.doorTex[game.openDoors.has(d.index) ? 1 : 0]!;
+    game.keys.forEach((k, i) => {
+      const s = this.keySprites[i]!;
+      s.visible = !k.taken;
+      s.y = k.y + Math.sin(t * 2.2 + i) * 1.2;
+    });
+    game.coins.forEach((c, i) => {
+      const s = this.coinSprites[i]!;
+      s.visible = !c.taken;
+      s.scale.x = Math.cos(t * 3 + i);
+    });
     game.survivors.forEach((s, i) => {
       const sprite = this.survivorSprites[i]!;
       sprite.visible = s.state !== 'turned' && s.timer < 3;

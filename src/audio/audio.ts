@@ -195,6 +195,19 @@ export class Sound {
         case 'burnt':
           this.noise(0.35, 300, 0.1);
           break;
+        case 'key':
+          [7, 9, 11].forEach((n, i) =>
+            this.tone(this.note(n) * 2, 'triangle', 0.05, 0.4, this.master!, i * 0.05),
+          );
+          break;
+        case 'coin':
+          this.tone(this.note(9) * 4, 'square', 0.025, 0.12);
+          this.tone(this.note(11) * 4, 'square', 0.02, 0.15, this.master!, 0.05);
+          break;
+        case 'doorOpen':
+          this.sweep(90, 160, 'sawtooth', 0.06, 0.6);
+          this.noise(0.3, 600, 0.08);
+          break;
         case 'saved':
           [0, 2, 4, 7, 9].forEach((n, i) =>
             this.tone(this.note(n), 'sine', 0.06, 1.6, this.echo ?? this.master!, i * 0.12),

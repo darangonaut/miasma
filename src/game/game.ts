@@ -239,6 +239,9 @@ export type GameEvent =
   | { type: 'burnt'; x: number; y: number }
   | { type: 'herb'; x: number; y: number }
   | { type: 'cure' }
+  | { type: 'key'; x: number; y: number }
+  | { type: 'coin'; x: number; y: number }
+  | { type: 'doorOpen'; x: number; y: number }
   | { type: 'saved'; x: number; y: number }
   | { type: 'turned'; x: number; y: number }
   | { type: 'shield'; on: boolean }
@@ -424,6 +427,11 @@ export class Game {
   readonly herbs: Pickup[];
   readonly nests: Nest[];
   readonly survivors: Survivor[];
+  readonly keys: Pickup[];
+  readonly coins: Pickup[];
+  /** Kľúče v brašni a otvorené dvere (index políčka). */
+  keysCarried = 0;
+  readonly openDoors = new Set<number>();
   /** Byliny v brašne. */
   herbsCarried = 0;
   private herbHeld = false;
@@ -577,6 +585,8 @@ export class Game {
     });
     this.herbs = level.herbs.map((p) => ({ ...p, taken: false }));
     this.nests = level.nests.map((p) => ({ ...p, state: 'intact', timer: 0 }));
+    this.keys = level.keys.map((p) => ({ ...p, taken: false }));
+    this.coins = level.coins.map((p) => ({ ...p, taken: false }));
     this.survivors = level.survivors.map((p) => ({
       x: p.x,
       y: p.y + TILE / 2,
@@ -623,6 +633,10 @@ export class Game {
 
   get fireflyCount(): number {
     return this.fireflies.filter((f) => f.taken).length;
+  }
+
+  get coinCount(): number {
+    return this.coins.filter((c) => c.taken).length;
   }
 
   get savedCount(): number {
@@ -790,7 +804,8 @@ export class Game {
         step: 0,
         lure: c.x,
         lureTime: BELL_FRENZY,
-        knock: 0,
+        // Chvíľu vstáva zo zeme (neútočí), aby premena nezabila hráča, ktorý stojí pri ňom.
+        knock: 1,
       });
     }
     for (const g of this.ghouls) {
@@ -971,6 +986,7 @@ export class Game {
       this.moveX(carrier.dx, lights);
       p.y += carrier.dy;
     }
+    this.tryDoor(Math.sign(p.vx + drift));
     this.moveX((p.vx + drift) * dt, lights);
     const wasOnGround = p.onGround;
     // Z trámu sa zoskočí šípkou dole (pri ukrývaní fakle na tráme teda spadneš nižšie).
@@ -985,6 +1001,26 @@ export class Game {
     else if (p.y > this.level.height * TILE + 48) this.die('fall');
   }
 
+  /** S kľúčom sa zamknuté dvere pred hráčom otvoria. */
+  private tryDoor(dir: number): void {
+    if (dir === 0 || this.keysCarried <= 0) return;
+    const p = this.player;
+    const col = Math.floor((dir > 0 ? p.x + PLAYER_W + 1 : p.x - 1) / TILE);
+    const w = this.level.width;
+    for (const row of [Math.floor(p.y / TILE), Math.floor((p.y + PLAYER_H - 3) / TILE)]) {
+      const i = row * w + col;
+      if (tileAt(this.level, col, row) !== Tile.Door || this.openDoors.has(i)) continue;
+      // Dvere sú aj dvojité: otvoria sa naraz všetky políčka nad sebou.
+      for (let r = row; tileAt(this.level, col, r) === Tile.Door; r--)
+        this.openDoors.add(r * w + col);
+      for (let r = row + 1; tileAt(this.level, col, r) === Tile.Door; r++)
+        this.openDoors.add(r * w + col);
+      this.keysCarried--;
+      this.events.push({ type: 'doorOpen', x: col * TILE + TILE / 2, y: row * TILE + TILE / 2 });
+      return;
+    }
+  }
+
   /** Pevné políčko pre pohyb; svetelné plošiny, v ktorých hráč už stojí, ho nezaseknú. */
   private solid(col: number, row: number, lights: LightSource[], overlapping: boolean): boolean {
     const tile = tileAt(this.level, col, row);
@@ -993,6 +1029,7 @@ export class Game {
       return this.crumbleAt.get(row * this.level.width + col)?.state !== 'gone';
     if (tile === Tile.Barricade)
       return this.barricadeAt.get(row * this.level.width + col)?.state !== 'gone';
+    if (tile === Tile.Door) return !this.openDoors.has(row * this.level.width + col);
     if (tile === Tile.Light) return !overlapping && this.isTileLit(col, row, lights);
     return false;
   }
@@ -1244,6 +1281,7 @@ export class Game {
       if (nest) this.igniteNest(nest);
       const blocked =
         isGround(tile) ||
+        (tile === Tile.Door && !this.openDoors.has(row * this.level.width + col)) ||
         tile === Tile.Water ||
         (barricade !== undefined && barricade.state !== 'gone') ||
         nest !== undefined ||
@@ -1551,6 +1589,7 @@ export class Game {
       const t = tileAt(level, col, r);
       if (t === Tile.Barricade)
         return this.barricadeAt.get(r * level.width + col)?.state !== 'gone';
+      if (t === Tile.Door) return !this.openDoors.has(r * level.width + col);
       return isGround(t) || t === Tile.Crumble;
     };
     if (body.some(wall)) return true;
@@ -1588,6 +1627,7 @@ export class Game {
       const t = tileAt(level, front, r);
       if (t === Tile.Barricade)
         return this.barricadeAt.get(r * level.width + front)?.state !== 'gone';
+      if (t === Tile.Door) return !this.openDoors.has(r * level.width + front);
       return isGround(t) || t === Tile.Crumble;
     });
     if (wall) g.vx = 0;
@@ -1669,6 +1709,17 @@ export class Game {
       hb.taken = true;
       this.herbsCarried++;
       this.events.push({ type: 'herb', x: hb.x, y: hb.y });
+    }
+    for (const k of this.keys) {
+      if (k.taken || !near(k, 13)) continue;
+      k.taken = true;
+      this.keysCarried++;
+      this.events.push({ type: 'key', x: k.x, y: k.y });
+    }
+    for (const coin of this.coins) {
+      if (coin.taken || !near(coin, 12)) continue;
+      coin.taken = true;
+      this.events.push({ type: 'coin', x: coin.x, y: coin.y });
     }
     for (const k of this.crystals) {
       if (k.taken || !near(k, 13)) continue;

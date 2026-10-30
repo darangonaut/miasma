@@ -526,6 +526,38 @@ class Gen:
             s.lv.ground(x0 + 2, x0 + n - 3, top=max(0, s.y - 6), bottom=s.y - 5)
             for dx in (6, 11, 15):
                 s.put(x0 + dx, s.y - 1, 'g')
+        elif kind == 'cellar':
+            # Pivnica pod cestou: diera dnu, na dne kľúč a groše, na konci trám a diera von.
+            if s.y + 5 >= H:
+                return s.block('step')
+            n = 10
+            x0 = s.x
+            s.flat(n, ember=False, rock=False)
+            for x in range(x0 + 2, x0 + n - 2):
+                for row in range(s.y + 1, s.y + 4):
+                    s.lv.g[row][x] = ' '
+            for x in (x0 + 2, x0 + 3, x0 + n - 4, x0 + n - 3):
+                s.lv.g[s.y][x] = ' '
+            s.lv.plat(x0 + n - 4, x0 + n - 3, s.y + 2)
+            s.put(x0 + 5, s.y + 3, 'k')
+            s.put(x0 + 4, s.y + 3, '$')
+            s.put(x0 + 6, s.y + 3, '$')
+            s.put(x0 + 7, s.y + 3, 'f')
+        elif kind == 'house':
+            # Dom: cesta vedie cez strechu (debna pod ňou), zamknuté dvere skrývajú izbu s grošmi.
+            if s.y - 5 < 1:
+                return s.block('step')
+            x0 = s.x
+            s.flat(10, ember=False, rock=False)
+            s.lv.ground(x0 + 1, x0 + 1, top=s.y - 2)
+            s.lv.ground(x0 + 3, x0 + 8, top=s.y - 4, bottom=s.y - 4)
+            for row in range(s.y - 4, s.y):
+                s.lv.g[row][x0 + 3] = '#'
+                s.lv.g[row][x0 + 8] = '#'
+            s.lv.g[s.y - 1][x0 + 3] = 'D'
+            for dx in (4, 5, 7):
+                s.put(x0 + dx, s.y - 1, '$')
+            s.put(x0 + 6, s.y - 1, 'h')
         elif kind == 'movers':
             if s.y > 12:
                 return s.block('pit')
@@ -597,20 +629,25 @@ def extend(lv, world, id_, diff, extra, hints):
     nests = [old + extra * (k + 1) // (count + 1) - 3 for k in range(count)]
     # Preživší (u) prosí o bylinu; tesne pred ním leží jedna (zachrániť jeho, alebo seba?).
     souls = [old + extra * (2 * k + 1) // (2 * (1 + diff // 8) + 1) for k in range(1 + diff // 8)]
+    # Pivnica s kľúčom (tretina) a dom so zamknutými dverami (dve tretiny) od druhého levelu.
+    secrets = [] if diff == 0 else [(old + extra // 4, 'cellar'), (old + 3 * extra // 5, 'house')]
     last = None
     while g.x < old + extra:
         kind = rng.choice([k for k in pool if k != last])
         last = kind
         g.block(kind)
         g.flat(rng.randint(2, 4))
-        if souls and g.x >= souls[0]:
+        while secrets and g.x >= secrets[0][0]:
+            g.block(secrets.pop(0)[1])
+            g.flat(3, rock=False)
+        while souls and g.x >= souls[0]:
             souls.pop(0)
             g.flat(3, rock=False)
             g.put(g.x - 2, g.y - 1, 'h')
             g.flat(6, ember=False, rock=False)
             g.put(g.x - 2, g.y - 1, 'u')
             g.flat(3, rock=False)
-        if nests and g.x >= nests[0]:
+        while nests and g.x >= nests[0]:
             nests.pop(0)
             g.flat(3, rock=False)
             g.put(g.x - 1, g.y - 1, 'n')
@@ -622,7 +659,7 @@ def extend(lv, world, id_, diff, extra, hints):
             g.flat(2)
             g.put(g.x - 1, g.y - 1, 'L')
             g.flat(3)
-    assert not nests and not souls, id_
+    assert not nests and not souls and not secrets, id_
     g.flat(6, ember=False, rock=False)
     assert g.put(g.x - 3, g.y - 1, 'E'), id_
     lv.w = g.x
