@@ -1,13 +1,13 @@
 :root {
   --ink: #05060b;
-  --text: #efe6d2;
-  --muted: #9a9cb4;
-  --gold: #ffd35a;
-  --glow: #fff2c4;
-  --ember: #ff8a3a;
-  --cyan: #8ff0ff;
-  --panel: rgb(8 10 20 / 55%);
-  --line: rgb(239 230 210 / 22%);
+  --text: #e6dccb;
+  --muted: #9a8e86;
+  --gold: #e8963a;
+  --glow: #ffe0b0;
+  --ember: #c8402a;
+  --cyan: #e8d29a;
+  --panel: rgb(12 6 8 / 60%);
+  --line: rgb(230 210 190 / 20%);
   --font: 'Nunito', system-ui, sans-serif;
   --title: 'Cinzel', Georgia, serif;
 }
@@ -57,8 +57,8 @@ button {
 }
 
 button:hover {
-  border-color: rgb(255 211 90 / 60%);
-  box-shadow: 0 0 18px rgb(255 200 90 / 25%);
+  border-color: rgb(232 150 58 / 60%);
+  box-shadow: 0 0 18px rgb(232 120 50 / 25%);
 }
 
 button:active {
@@ -68,20 +68,20 @@ button:active {
 button.big {
   padding: 13px 44px;
   font-size: 20px;
-  color: #1c1306;
+  color: #1a0a06;
   text-transform: uppercase;
   letter-spacing: 0.14em;
-  background: radial-gradient(circle at 50% 30%, var(--glow), var(--gold) 70%);
+  background: radial-gradient(circle at 50% 30%, var(--glow), var(--gold) 55%, #9a3a1a);
   border: 0;
   box-shadow:
-    0 0 28px rgb(255 200 90 / 45%),
-    0 0 80px rgb(255 170 70 / 20%);
+    0 0 28px rgb(232 120 50 / 40%),
+    0 0 80px rgb(200 70 30 / 20%);
 }
 
 button.big:hover {
   box-shadow:
-    0 0 36px rgb(255 200 90 / 65%),
-    0 0 100px rgb(255 170 70 / 30%);
+    0 0 36px rgb(232 120 50 / 60%),
+    0 0 100px rgb(200 70 30 / 30%);
 }
 
 /* --- HUD --- */
@@ -120,7 +120,7 @@ button.big:hover {
   background: linear-gradient(var(--glow), var(--gold));
   border: 2px solid #0d0f18;
   border-radius: 3px 3px 4px 4px;
-  box-shadow: 0 0 12px rgb(255 200 90 / 70%);
+  box-shadow: 0 0 12px rgb(240 130 50 / 70%);
 }
 
 .oil-bar {
@@ -136,7 +136,7 @@ button.big:hover {
   height: 100%;
   background: linear-gradient(90deg, var(--gold), var(--glow));
   border-radius: 999px;
-  box-shadow: 0 0 10px rgb(255 200 90 / 70%);
+  box-shadow: 0 0 10px rgb(240 130 50 / 70%);
 }
 
 .oil.low .oil-fill {
@@ -156,7 +156,7 @@ button.big:hover {
 }
 
 .fireflies {
-  color: #e2f78a;
+  color: #ffb070;
 }
 
 .crystals {
@@ -200,9 +200,9 @@ button.big:hover {
   line-height: 1.4;
   text-align: center;
   background: rgb(8 10 20 / 70%);
-  border: 1px solid rgb(255 211 90 / 30%);
+  border: 1px solid rgb(232 150 58 / 30%);
   border-radius: 16px;
-  box-shadow: 0 0 30px rgb(255 200 90 / 12%);
+  box-shadow: 0 0 30px rgb(232 120 50 / 12%);
   backdrop-filter: blur(6px);
   transform: translateX(-50%);
   pointer-events: none;
@@ -220,7 +220,7 @@ button.big:hover {
   text-align: center;
   letter-spacing: 0.06em;
   text-shadow:
-    0 0 18px rgb(255 200 90 / 60%),
+    0 0 18px rgb(232 120 50 / 60%),
     0 2px 10px rgb(0 0 0 / 80%);
   pointer-events: none;
   opacity: 0;
@@ -299,8 +299,8 @@ button.big:hover {
 }
 
 #touch button.down {
-  background: rgb(255 211 90 / 30%);
-  box-shadow: 0 0 20px rgb(255 200 90 / 40%);
+  background: rgb(232 150 58 / 30%);
+  box-shadow: 0 0 20px rgb(232 120 50 / 40%);
 }
 
 .pad-left,
@@ -373,8 +373,8 @@ button.big:hover {
   letter-spacing: 0.22em;
   text-indent: 0.22em;
   text-shadow:
-    0 0 24px rgb(255 205 110 / 70%),
-    0 0 70px rgb(255 170 70 / 35%);
+    0 0 24px rgb(240 140 70 / 70%),
+    0 0 70px rgb(200 60 30 / 40%);
   animation: flicker 3.2s ease-in-out infinite;
 }
 
@@ -401,7 +401,7 @@ button.big:hover {
   margin: 0 0 8px;
   font-size: 18px;
   font-style: italic;
-  color: #d8d2e6;
+  color: #d8cfc4;
   text-shadow: 0 1px 8px rgb(0 0 0 / 80%);
 }
 
@@ -424,7 +424,7 @@ button.big:hover {
   max-width: 560px;
   margin: 4px 0 0;
   font-size: 13px;
-  color: #c2c4d6;
+  color: #c4b8ae;
   text-shadow: 0 1px 6px rgb(0 0 0 / 90%);
 }
 
@@ -435,7 +435,7 @@ button.big:hover {
   font-weight: 600;
   color: var(--glow);
   letter-spacing: 0.05em;
-  text-shadow: 0 0 22px rgb(255 200 90 / 50%);
+  text-shadow: 0 0 22px rgb(232 120 50 / 50%);
 }
 
 .screen p {

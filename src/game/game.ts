@@ -1,4 +1,13 @@
-import { TILE, Tile, isGround, tileAt, type Level, type Point, type Sign, type World } from './level';
+import {
+  TILE,
+  Tile,
+  isGround,
+  tileAt,
+  type Level,
+  type Point,
+  type Sign,
+  type World,
+} from './level';
 import { Rng } from './rng';
 
 export interface Input {
@@ -429,9 +438,9 @@ export class Game {
     return { x: this.player.x + PLAYER_W / 2, y: this.player.y + PLAYER_H / 2 };
   }
 
-  /** Poloha plameňa (lampáš v ruke pred hráčom). */
+  /** Poloha plameňa (fakľa v ruke pred hráčom). */
   get lamp(): Point {
-    return { x: this.player.x + PLAYER_W / 2 + this.player.facing * 5, y: this.player.y + 4 };
+    return { x: this.player.x + PLAYER_W / 2 + this.player.facing * 6, y: this.player.y + 5 };
   }
 
   get fireflyCount(): number {
@@ -1075,10 +1084,11 @@ export class Game {
         }
       } else g.hp = Math.min(1, g.hp + dt * 0.25);
 
-      let want = 0;
-      if (g.burning) want = -Math.sign(dx || 1) * GHOUL_CHASE * 0.6;
-      else if (g.chasing) want = Math.sign(dx) * GHOUL_CHASE;
-      else want = g.dir * GHOUL_WALK;
+      const want = g.burning
+        ? -Math.sign(dx || 1) * GHOUL_CHASE * 0.6
+        : g.chasing
+          ? Math.sign(dx) * GHOUL_CHASE
+          : g.dir * GHOUL_WALK;
       if (want !== 0 && !g.burning) g.dir = want > 0 ? 1 : -1;
       g.vx = approach(g.vx, want, 260 * dt);
       const nx = g.x + g.vx * dt;
@@ -1107,7 +1117,11 @@ export class Game {
     const body = [row, Math.floor((feet - GHOUL_H + 1) / TILE)];
     if (body.some((r) => isGround(tileAt(level, col, r)) || tileAt(level, col, r) === Tile.Crumble))
       return true;
-    if (body.some((r) => tileAt(level, col, r) === Tile.Thorns || tileAt(level, col, r) === Tile.Water))
+    if (
+      body.some(
+        (r) => tileAt(level, col, r) === Tile.Thorns || tileAt(level, col, r) === Tile.Water,
+      )
+    )
       return true;
     const below = tileAt(level, col, row + 1);
     return !(isGround(below) || below === Tile.Ledge || below === Tile.Crumble);

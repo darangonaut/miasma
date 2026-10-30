@@ -65,19 +65,13 @@ function levelName(index: number): string {
 }
 
 const WORLD_NAMES: Record<string, Key> = {
-  forest: 'world1',
-  caves: 'world2',
-  swamp: 'world3',
-  ice: 'world4',
-  tower: 'world5',
-  abyss: 'world6',
-  storm: 'world7',
+  quarter: 'world1',
+  catacombs: 'world2',
+  pits: 'world3',
+  cathedral: 'world4',
 };
 
-/** „Zatopené jaskyne 2/4“ — poradie levelu v rámci jeho sveta. */
-/** Počet levelov hlavného príbehu; za nimi nasleduje bonusový Búrlivý vrch. */
-const MAIN_LEVELS = LEVELS.findIndex((l) => l.world === 'storm');
-
+/** „Katakomby 2/4“ — poradie levelu v rámci jeho sveta. */
 function levelLabel(index: number): string {
   const world = LEVELS[index]!.world;
   const inWorld = LEVELS.filter((l) => l.world === world);
@@ -129,7 +123,6 @@ function refreshTexts(): void {
   $('.done-title').textContent = t('levelDone');
   $('.next').textContent = t('next');
   $('.replay').textContent = t('replay');
-  $('.bonus-play').textContent = t('bonusPlay');
   $('.victory-menu').textContent = t('toMenu');
   $('.rotate-text').textContent = t('rotate');
 }
@@ -246,11 +239,9 @@ $('.sound-toggle').addEventListener('click', () => {
 });
 $('.pause-btn').addEventListener('click', () => setPaused(true));
 $('.next').addEventListener('click', () => {
-  if (levelIndex === MAIN_LEVELS - 1) showVictory(false);
-  else if (levelIndex + 1 < LEVELS.length) void startLevel(levelIndex + 1);
-  else showVictory(true);
+  if (levelIndex + 1 < LEVELS.length) void startLevel(levelIndex + 1);
+  else showVictory();
 });
-$('.bonus-play').addEventListener('click', () => void startLevel(MAIN_LEVELS));
 $('.replay').addEventListener('click', () => void startLevel(levelIndex));
 $('.victory-menu').addEventListener('click', () => toMenu());
 window.addEventListener('keydown', (e) => {
@@ -272,11 +263,15 @@ function formatTime(seconds: number): string {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-/** Smrť vo vode podľa sveta: ľadová voda, bahno alebo temná hlbina. */
-function waterDeath(): Key {
-  const world = LEVELS[levelIndex]!.world;
-  return world === 'swamp' ? 'diedSwamp' : world === 'abyss' ? 'diedAbyss' : 'diedWater';
-}
+const DEATHS: Record<string, Key> = {
+  thorns: 'diedThorns',
+  fall: 'diedFall',
+  dark: 'diedDark',
+  water: 'diedWater',
+  icicle: 'diedIcicle',
+  shade: 'diedShade',
+  ghoul: 'diedGhoul',
+};
 
 function finishLevel(g: Game): void {
   const def = LEVELS[levelIndex]!;
@@ -293,8 +288,7 @@ function finishLevel(g: Game): void {
   // Posledný level sveta (nie celej hry): ohlási ďalší svet.
   const doneWorld = $('.done-world');
   const next = LEVELS[levelIndex + 1];
-  // Bonusový svet ohlási až záverečná obrazovka.
-  doneWorld.hidden = !next || next.world === def.world || levelIndex === MAIN_LEVELS - 1;
+  doneWorld.hidden = !next || next.world === def.world;
   if (next)
     doneWorld.textContent = t('worldDone', {
       world: t(WORLD_NAMES[def.world]!),
@@ -305,15 +299,14 @@ function finishLevel(g: Game): void {
   show(done);
 }
 
-/** Záver hry (po 24. leveli) alebo bonusového sveta (po poslednom). */
-function showVictory(bonus: boolean): void {
+/** Záver hry po poslednom leveli. */
+function showVictory(): void {
   const save = readSave();
   let f = 0;
   let ft = 0;
   let c = 0;
   let ct = 0;
-  const counted = bonus ? LEVELS.slice(MAIN_LEVELS) : LEVELS.slice(0, MAIN_LEVELS);
-  for (const def of counted) {
+  for (const def of LEVELS) {
     const level = parseLevel(def);
     ft += level.fireflies.length;
     ct += level.crystals.length;
@@ -321,12 +314,9 @@ function showVictory(bonus: boolean): void {
     c += save.best[def.id]?.crystals ?? 0;
   }
   $('.victory-stats').textContent = t('victoryStats', { f, ft, c, ct, d: game?.deaths ?? 0 });
-  $('.victory-title').textContent = t(bonus ? 'bonusTitle' : 'victoryTitle');
-  $('.victory-story').textContent = t(bonus ? 'bonusStory' : 'victoryStory');
-  $('.coming-soon').textContent = bonus
-    ? t('comingSoon')
-    : t('bonusUnlocked', { world: t('world7') });
-  $<HTMLButtonElement>('.bonus-play').hidden = bonus;
+  $('.victory-title').textContent = t('victoryTitle');
+  $('.victory-story').textContent = t('victoryStory');
+  $('.coming-soon').textContent = t('comingSoon');
   sound.setWind(0);
   game = null;
   hud.hidden = true;
@@ -340,19 +330,7 @@ function onEvents(events: GameEvent[]): void {
       hurt.style.opacity = '1';
       window.setTimeout(() => (hurt.style.opacity = '0'), 160);
     } else if (e.type === 'died') {
-      showToast(
-        t(
-          e.cause === 'thorns'
-            ? 'diedThorns'
-            : e.cause === 'fall'
-              ? 'diedFall'
-              : e.cause === 'water'
-                ? waterDeath()
-                : e.cause === 'icicle'
-                  ? 'diedIcicle'
-                  : 'diedDark',
-        ),
-      );
+      showToast(t(DEATHS[e.cause]!));
     } else if (e.type === 'exit') {
       doneTimer = 1.8;
     } else if (e.type === 'firefly' || e.type === 'lantern') {
@@ -370,8 +348,8 @@ function updateHud(g: Game): void {
     oilWarned = true;
     showToast(t('oilLow'));
   }
-  $('.fireflies').textContent = `✦ ${g.fireflyCount}/${g.fireflies.length}`;
-  $('.crystals').textContent = g.crystals.length ? `◆ ${g.crystalCount}/${g.crystals.length}` : '';
+  $('.fireflies').textContent = `✶ ${g.fireflyCount}/${g.fireflies.length}`;
+  $('.crystals').textContent = g.crystals.length ? `✝ ${g.crystalCount}/${g.crystals.length}` : '';
   dread.style.opacity = String(Math.min(1, g.dread / DREAD_LIMIT) * 0.9);
   if (g.sign && g.state === 'play') {
     const text = hintText(g.sign.hint);
@@ -406,7 +384,15 @@ function frame(now: number): void {
     }
     renderer.render(dt);
     updateHud(game);
-    sound.update(dt, game.oil <= 0 ? 1 : game.shades.some((s) => s.alive && s.active) ? 0.6 : 0);
+    sound.update(
+      dt,
+      game.oil <= 0
+        ? 1
+        : game.shades.some((s) => s.alive && s.active) ||
+            game.ghouls.some((g) => g.alive && g.chasing)
+          ? 0.6
+          : 0,
+    );
     sound.setWind(Math.abs(game.wind));
   }
 }

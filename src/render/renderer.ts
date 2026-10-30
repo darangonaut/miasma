@@ -9,6 +9,7 @@ import {
 } from 'pixi.js';
 import {
   FLARE_RADIUS,
+  GHOUL_H,
   LANTERN_RADIUS,
   SPARK_RADIUS,
   PLAYER_H,
@@ -80,6 +81,9 @@ export class Renderer {
     shade: [] as Texture[],
     shadeBurn: [] as Texture[],
     eyes: Texture.EMPTY,
+    ghoul: [] as Texture[],
+    ghoulBurn: [] as Texture[],
+    ghoulEyes: Texture.EMPTY,
     firefly: Texture.EMPTY,
     crystal: Texture.EMPTY,
     lantern: [Texture.EMPTY, Texture.EMPTY],
@@ -111,6 +115,9 @@ export class Renderer {
   private waterSprites: { sprite: Sprite; col: number }[] = [];
   private player = new Sprite();
   private shadeSprites: { body: Sprite; eyes: Sprite }[] = [];
+  private ghoulSprites: { body: Sprite; eyes: Sprite }[] = [];
+  /** Plameň fakle (kreslí sa nad tmou). */
+  private torch = new Sprite();
   private fireflySprites: Sprite[] = [];
   private crystalSprites: Sprite[] = [];
   private lanternSprites: Sprite[] = [];
@@ -143,7 +150,7 @@ export class Renderer {
     this.buildTextures();
 
     // Pozadie: nebo, mesiac, kopce a stromy s paralaxou.
-    const forest = this.back('forest');
+    const forest = this.back('quarter');
     this.sky = new TilingSprite({ texture: forest.sky, width: 320, height: 240 });
     this.moon = new Sprite(this.tex.moon);
     this.hills = new TilingSprite({ texture: forest.far, width: 480, height: 110 });
@@ -166,6 +173,9 @@ export class Renderer {
     this.tex.shade = [0, 1, 2].map((f) => art.shade(f, false));
     this.tex.shadeBurn = [0, 1, 2].map((f) => art.shade(f, true));
     this.tex.eyes = art.eyes();
+    this.tex.ghoul = [0, 1, 2, 3].map((f) => art.ghoul(f, false));
+    this.tex.ghoulBurn = [0, 1, 2, 3].map((f) => art.ghoul(f, true));
+    this.tex.ghoulEyes = art.ghoulEyes();
     this.tex.firefly = art.firefly();
     this.tex.crystal = art.crystal();
     this.tex.lantern = [art.lantern(false), art.lantern(true)];
@@ -224,6 +234,7 @@ export class Renderer {
     this.trees.texture = back.near;
     this.tex.water = back.water;
     this.moon.visible = info.moon;
+    this.moon.tint = info.moonTint;
     this.darkness = info.darkness;
     this.ambient = info.ambient;
 
@@ -293,13 +304,14 @@ export class Renderer {
       this.level.addChild(post, lantern);
       return lantern;
     });
+    // Hranica: kôl je v strede cieľa.
     const fire = new Sprite(art.campfire());
-    fire.anchor.set(0.5, 1);
-    fire.position.set(level.exit.x + 3, level.exit.y + TILE / 2);
+    fire.anchor.set(10 / 24, 1);
+    fire.position.set(level.exit.x, level.exit.y + TILE / 2);
     this.level.addChild(fire);
     this.mushrooms = decorOf(level)
-      .filter((d) => d.kind === 'mushroom')
-      .map((d) => ({ x: d.x, y: d.y - 3 }));
+      .filter((d) => d.kind === 'candle')
+      .map((d) => ({ x: d.x, y: d.y - 3.4 }));
 
     this.fireflySprites = game.fireflies.map((f) => {
       const s = new Sprite(this.tex.firefly);
@@ -324,6 +336,15 @@ export class Renderer {
       this.above.addChild(eyes);
       return { body, eyes };
     });
+    this.ghoulSprites = game.ghouls.map(() => {
+      const body = new Sprite(this.tex.ghoul[0]);
+      body.anchor.set(0.5, 15.4 / 17);
+      const eyes = new Sprite(this.tex.ghoulEyes);
+      eyes.anchor.set(0.5, 15.4 / 17);
+      this.actors.addChild(body);
+      this.above.addChild(eyes);
+      return { body, eyes };
+    });
     this.icicleSprites = game.icicles.map(() => {
       const sprite = new Sprite(this.tex.icicle);
       sprite.anchor.set(0.5, 0);
@@ -337,10 +358,11 @@ export class Renderer {
       return s;
     });
     this.sparkSprites = [];
-    this.flames = [0, 1].map((i) => {
+    this.flames = [0, 1, 2].map((i) => {
       const s = new Sprite(this.tex.flame[i]);
       s.anchor.set(0.5, 1);
-      s.position.set(level.exit.x + 2 + i * 3 - 1, level.exit.y + TILE / 2 - 3);
+      s.position.set(level.exit.x - 5 + i * 5, level.exit.y + TILE / 2 - 2);
+      s.scale.set(i === 1 ? 1.5 : 1.1);
       s.visible = false;
       this.above.addChild(s);
       return s;
@@ -348,6 +370,9 @@ export class Renderer {
     this.player = new Sprite(this.tex.player.get('idle'));
     this.player.anchor.set(0.5, 1);
     this.actors.addChild(this.player);
+    this.torch = new Sprite(this.tex.flame[0]);
+    this.torch.anchor.set(0.5, 0.97);
+    this.above.addChild(this.torch);
 
     if (!this.darkSprite) this.darkSprite = new Sprite();
     this.world.addChild(
@@ -454,6 +479,11 @@ export class Renderer {
         case 'shatter':
           this.shake = 1.5;
           this.burst(e.x, e.y, 12, 0xcfeeff, 60, true);
+          break;
+        case 'ghoulDie':
+          this.shake = 2;
+          this.burst(e.x, e.y, 16, C.shadeInner, 55, false);
+          this.burst(e.x, e.y, 10, C.plague, 45, true);
           break;
         case 'shadeHit':
           this.shake = 3;
@@ -617,6 +647,13 @@ export class Renderer {
     );
     this.player.visible =
       game.state !== 'dead' && !(p.invulnerable > 0 && Math.floor(t * 12) % 2 === 0);
+    // Plameň fakle: pri rozžiarení šľahá, bez smoly zostane len tlejúci uhlík.
+    const lamp = game.lamp;
+    this.torch.visible = game.state !== 'dead';
+    this.torch.texture = this.tex.flame[Math.floor(t * 12) % 3]!;
+    const size = game.oil <= 0 ? 0.12 : 0.22 + (game.radius / FLARE_RADIUS) * 0.3;
+    this.torch.scale.set(size * (1 + Math.sin(t * 23) * 0.06), size * (1 + Math.sin(t * 17) * 0.1));
+    this.torch.position.set(lamp.x, lamp.y + 1.6);
 
     // Svetelné plošiny sa plynule zjavia a zmiznú.
     for (const lt of this.lightTiles) {
@@ -700,21 +737,37 @@ export class Renderer {
     });
     game.movers.forEach((m, i) => this.moverSprites[i]!.position.set(m.x, m.y));
 
+    game.ghouls.forEach((g, i) => {
+      const { body, eyes } = this.ghoulSprites[i]!;
+      body.visible = eyes.visible = g.alive;
+      if (!g.alive) return;
+      const f = Math.floor(g.step / 5) % 4;
+      body.texture = (g.burning ? this.tex.ghoulBurn : this.tex.ghoul)[f]!;
+      body.position.set(g.x, g.y + 1);
+      body.scale.x = g.dir;
+      eyes.position.copyFrom(body.position);
+      eyes.scale.x = g.dir;
+      eyes.alpha = g.chasing ? 1 : 0.55;
+    });
+
     game.shades.forEach((s, i) => {
       const { body, eyes } = this.shadeSprites[i]!;
       body.visible = eyes.visible = s.alive;
       if (!s.alive) return;
       const f = Math.floor(t * 8 + i) % 3;
       body.texture = (s.burning ? this.tex.shadeBurn : this.tex.shade)[f]!;
-      body.position.set(this.px(s.x), this.px(s.y));
+      // Pred výpadom sa prízrak zachveje.
+      const shiver = s.state === 'windup' ? Math.sin(t * 90) * 0.8 : 0;
+      body.position.set(this.px(s.x + shiver), this.px(s.y));
       const size = s.big ? 1.8 : 1;
       body.scale.set((game.center.x < s.x ? -1 : 1) * size, size);
       eyes.position.copyFrom(body.position);
       eyes.scale.copyFrom(body.scale);
       // Oči v tme žmurkajú; pri výpade svietia naplno.
       const blink = Math.floor(t * 1.3 + i * 0.37) % 7 === 0 && (t * 1.3 + i * 0.37) % 1 < 0.15;
-      eyes.alpha = blink ? 0 : s.state === 'lunge' ? 1 : 0.75;
-      eyes.tint = s.state === 'lunge' ? 0xff7a8a : 0xffffff;
+      const angry = s.state === 'lunge' || s.state === 'windup';
+      eyes.alpha = blink && !angry ? 0 : angry ? 1 : 0.75;
+      eyes.tint = angry ? 0xff5040 : 0xffffff;
       body.alpha = s.active ? 1 : 0.8;
     });
   }
@@ -877,7 +930,9 @@ export class Renderer {
       glowUsed++;
     };
 
-    const flicker = 1 + Math.sin(t * 13) * 0.025 + Math.sin(t * 7.3) * 0.02;
+    // Fakľa blikotá viac než lampáš.
+    const flicker =
+      1 + Math.sin(t * 13) * 0.04 + Math.sin(t * 7.3) * 0.03 + Math.sin(t * 29) * 0.015;
     if (game.state !== 'dead') {
       const lamp = game.lamp;
       light(lamp.x, lamp.y, game.radius * flicker);
@@ -891,12 +946,12 @@ export class Renderer {
     }
     const exit = game.level.exit;
     if (game.exitLit) {
-      light(exit.x, exit.y, LANTERN_RADIUS * 1.6 * flicker);
-      glow(exit.x, exit.y, LANTERN_RADIUS * 1.5, WARM, 0.25);
+      light(exit.x, exit.y - 4, LANTERN_RADIUS * 2 * flicker);
+      glow(exit.x, exit.y - 4, LANTERN_RADIUS * 1.8, WARM, 0.3);
     } else {
-      // Pahreba: ukazuje cieľ z diaľky.
-      light(exit.x, exit.y + 4, 18 * flicker, 0.8);
-      glow(exit.x, exit.y + 4, 22, C.flameRed, 0.35);
+      // Tlejúca smola v hranici ukazuje cieľ z diaľky.
+      light(exit.x, exit.y + 4, 16 * flicker, 0.7);
+      glow(exit.x, exit.y + 4, 20, C.flameRed, 0.3);
     }
     for (const lt of this.lightTiles) {
       if (lt.sprite.alpha < 0.5) continue;
@@ -915,9 +970,12 @@ export class Renderer {
       glow(s.x, s.y, 14, C.crystal, 0.3);
     });
     for (const m of this.mushrooms) {
-      light(m.x, m.y, 9, 0.5);
-      glow(m.x, m.y, 8, C.mushroom, 0.25);
+      light(m.x, m.y, 10 * flicker, 0.5);
+      glow(m.x, m.y, 9, C.mushroom, 0.3);
     }
+    // Oči nakazených trochu presvitajú tmou, aby bolo vidieť, odkiaľ idú.
+    for (const g of game.ghouls)
+      if (g.alive) glow(g.x + g.dir * 3, g.y - GHOUL_H + 4, 6, C.plague, 0.25);
     for (const sp of game.sparks) {
       light(sp.x, sp.y, SPARK_RADIUS);
       glow(sp.x, sp.y, 22, C.flame, 0.35);

@@ -1,4 +1,13 @@
-import { Game, MOVER_W, NO_INPUT, PLAYER_H, PLAYER_W, calmLeft, hasWind, type Input } from '@/game/game';
+import {
+  Game,
+  MOVER_W,
+  NO_INPUT,
+  PLAYER_H,
+  PLAYER_W,
+  calmLeft,
+  hasWind,
+  type Input,
+} from '@/game/game';
 import { TILE, Tile, isGround, tileAt } from '@/game/level';
 
 /**
@@ -51,7 +60,11 @@ export function botRun(game: Game, seconds = 600): { done: boolean; col: number;
     // Vietor: na pevnej zemi počká, kým vietor utíchne a do ďalšieho nárazu je dosť času.
     if (windy && p.onGround && game.onMover < 0) {
       const under = tileAt(level, Math.floor((p.x + PLAYER_W / 2) / TILE), feet);
-      if (under !== Tile.Crumble && under !== Tile.Ice && (game.wind !== 0 || calmLeft(game.time) < 1.6)) {
+      if (
+        under !== Tile.Crumble &&
+        under !== Tile.Ice &&
+        (game.wind !== 0 || calmLeft(game.time) < 1.6)
+      ) {
         hold = 0;
         step({});
         continue;

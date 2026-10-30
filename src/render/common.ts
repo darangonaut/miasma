@@ -6,11 +6,16 @@ export const C = {
   flame: 0xffd35a,
   flameHot: 0xfff6c8,
   flameRed: 0xff8a3a,
-  firefly: 0xd9f56a,
-  crystal: 0x8ff0ff,
-  shadeInner: 0x1a1428,
+  /** Uhlíky (smola do fakle). */
+  firefly: 0xff9a3c,
+  /** Relikvie. */
+  crystal: 0xf4e2a8,
+  shadeInner: 0x1a1418,
   cloak: 0x0d0f18,
-  mushroom: 0x6cf0e0,
+  /** Sviečky pri cestách. */
+  mushroom: 0xffb060,
+  /** Oči a vredy nakazených. */
+  plague: 0xc8d46a,
 };
 
 export const PLAYER_FRAMES = ['idle', 'run0', 'run1', 'run2', 'run3', 'jump', 'fall'] as const;
@@ -24,12 +29,13 @@ export function noise(x: number, y: number, seed: number): number {
 }
 
 export interface Decor {
-  kind: 'mushroom' | 'tuft';
+  /** Sviečka (malé svetlo) alebo len trs na povrchu. */
+  kind: 'candle' | 'tuft';
   x: number;
   y: number;
 }
 
-/** Miesta na svietiace hríbiky (sú aj malé svetlá) a trsy trávy. */
+/** Miesta na dohárajúce sviečky (sú aj malé svetlá) a trsy na povrchu. */
 export function decorOf(level: Level): Decor[] {
   const out: Decor[] = [];
   for (let row = 1; row < level.height; row++) {
@@ -39,7 +45,8 @@ export function decorOf(level: Level): Decor[] {
       const n = noise(col, row, 41);
       const x = col * TILE + 3 + Math.floor(noise(col, row, 42) * 10);
       const y = row * TILE;
-      if (n < (level.world === 'caves' ? 0.16 : 0.07)) out.push({ kind: 'mushroom', x, y });
+      if (n < (level.world === 'catacombs' ? 0.09 : level.world === 'pits' ? 0 : 0.035))
+        out.push({ kind: 'candle', x, y });
       else if (n < 0.4) out.push({ kind: 'tuft', x, y });
     }
   }

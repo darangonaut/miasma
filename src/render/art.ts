@@ -10,6 +10,8 @@ import type { PlayerFrame } from './common';
 export interface WorldInfo {
   darkness: number;
   moon: boolean;
+  /** Farba mesiaca (krvavý nad mestom, chorobne zelený nad cintorínom). */
+  moonTint: number;
   ambient: 'motes' | 'wisps' | 'snow' | 'dust' | 'embers' | 'rain';
 }
 
@@ -19,6 +21,8 @@ export interface Art {
   player(frame: PlayerFrame | 'breathe'): Texture;
   shade(frame: number, burning: boolean): Texture;
   eyes(): Texture;
+  ghoul(frame: number, burning: boolean): Texture;
+  ghoulEyes(): Texture;
   firefly(): Texture;
   crystal(): Texture;
   lantern(lit: boolean): Texture;

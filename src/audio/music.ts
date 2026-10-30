@@ -1,32 +1,31 @@
 import type { World } from '@/game/level';
 
 /**
- * Pomalá melodická hudba do tmy: mollové akordy, hlboký bas a jednoduchá melódia
- * hracej skrinky. Skladba sa skladá z cyklov po štyroch akordoch (každý dva takty);
- * melódia sa opakuje s obmenami a občas stíchne, aby ostali len akordy.
+ * Pomalá temná hudba: chorál z filtrovaných píšťal, hlboký bas, smutná melódia sláčika
+ * a na začiatku každého cyklu úder umieračika. Skladba sa skladá z cyklov po štyroch
+ * akordoch (každý dva takty); melódia sa opakuje s obmenami a občas stíchne.
  */
 
-/** Prirodzená mollová stupnica (poltóny od základu). */
+/** Prirodzená mollová a frýgická stupnica (poltóny od základu). */
 const MINOR = [0, 2, 3, 5, 7, 8, 10];
+const PHRYGIAN = [0, 1, 3, 5, 7, 8, 10];
 /** Mollová pentatonika pre zvonenie svetlušiek a kryštálov. */
 const PENTA = [0, 3, 5, 7, 10];
 
 interface Key {
   /** Základný tón melódie (Hz); akordy znejú o oktávu nižšie, bas o dve. */
   root: number;
+  scale: number[];
   /** Akordy ako stupne stupnice (0 = i, 5 = VI, 2 = III, 6 = VII, 3 = iv, 4 = v). */
   chords: number[];
   bpm: number;
 }
 
 const KEYS: Record<World, Key> = {
-  forest: { root: 220, chords: [0, 5, 2, 6], bpm: 56 },
-  caves: { root: 146.83 * 2, chords: [0, 3, 5, 4], bpm: 52 },
-  swamp: { root: 164.81 * 2, chords: [0, 5, 3, 0], bpm: 54 },
-  ice: { root: 246.94 * 2, chords: [0, 6, 5, 6], bpm: 58 },
-  tower: { root: 261.63, chords: [0, 6, 5, 6], bpm: 54 },
-  abyss: { root: 174.61, chords: [0, 1, 0, 6], bpm: 48 },
-  storm: { root: 196 * 2, chords: [0, 5, 3, 4], bpm: 60 },
+  quarter: { root: 196, scale: PHRYGIAN, chords: [0, 5, 1, 0], bpm: 46 },
+  catacombs: { root: 146.83, scale: PHRYGIAN, chords: [0, 1, 0, 6], bpm: 40 },
+  pits: { root: 164.81, scale: MINOR, chords: [0, 3, 5, 4], bpm: 44 },
+  cathedral: { root: 220, scale: MINOR, chords: [0, 5, 3, 4], bpm: 48 },
 };
 
 /** Melodické vzorce na jeden akord (8 dôb): [stupeň od základu akordu, dĺžka]; null = pauza. */
@@ -81,14 +80,14 @@ const SONG: Pattern[][] = [
   [P.rest!, P.rest!, P.rest!, P.rest!],
 ];
 
-function degreeToFreq(root: number, degree: number): number {
+function degreeToFreq(key: Key, root: number, degree: number): number {
   const octave = Math.floor(degree / 7);
-  const step = MINOR[((degree % 7) + 7) % 7]!;
+  const step = key.scale[((degree % 7) + 7) % 7]!;
   return root * 2 ** ((octave * 12 + step) / 12);
 }
 
 export class Music {
-  private key: Key = KEYS.forest;
+  private key: Key = KEYS.quarter;
   private nextKey: Key | null = null;
   /** Čas (ctx) začiatku ďalšieho akordu a jeho poradie v skladbe. */
   private nextChordAt = 0;
@@ -157,18 +156,20 @@ export class Music {
     const low = key.root / 2;
 
     // Akord: tri tóny s pomalým nádychom a dlhým doznením.
-    for (const d of [chord, chord + 2, chord + 4]) this.pad(degreeToFreq(low, d), t, length);
+    for (const d of [chord, chord + 2, chord + 4]) this.pad(degreeToFreq(key, low, d), t, length);
     // Bas: základ akordu o oktávu nižšie.
-    this.bass(degreeToFreq(low / 2, chord), t, length);
+    this.bass(degreeToFreq(key, low / 2, chord), t, length);
+    // Umieračik na začiatku každého cyklu.
+    if (this.chordIndex === 0) this.knell(key.root / 2, t);
 
-    // Melódia hracej skrinky.
+    // Melódia sláčika.
     const pattern = SONG[this.cycle % SONG.length]![this.chordIndex]!;
     let at = t;
     for (const [rel, beats] of pattern) {
       if (rel !== null) {
         let degree = chord + rel;
         if (degree > 9) degree -= 7;
-        this.bell(degreeToFreq(key.root, degree), at, beats * beat);
+        this.viol(degreeToFreq(key, key.root, degree), at, beats * beat);
       }
       at += beats * beat;
     }
@@ -178,20 +179,21 @@ export class Music {
     if (this.chordIndex === 0) this.cycle++;
   }
 
+  /** Chorál: dve rozladené píly cez tlmiaci filter, znie ako vzdialený organ. */
   private pad(freq: number, t: number, length: number): void {
     const ctx = this.ctx;
     const g = ctx.createGain();
     const filter = ctx.createBiquadFilter();
     filter.type = 'lowpass';
-    filter.frequency.value = 900;
+    filter.frequency.value = 520;
     g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(0.024, t + 2.2);
-    g.gain.setValueAtTime(0.024, t + length - 0.5);
+    g.gain.linearRampToValueAtTime(0.016, t + 2.6);
+    g.gain.setValueAtTime(0.016, t + length - 0.5);
     g.gain.linearRampToValueAtTime(0, t + length + 2.5);
     g.connect(filter).connect(this.out);
-    for (const detune of [-6, 6]) {
+    for (const detune of [-8, 8]) {
       const o = ctx.createOscillator();
-      o.type = 'triangle';
+      o.type = 'sawtooth';
       o.frequency.value = freq;
       o.detune.value = detune;
       o.connect(g);
@@ -215,22 +217,59 @@ export class Music {
     o.stop(t + length + 1.1);
   }
 
-  /** Jemný zvonček: základ, tichá oktáva a ozvena; doznieva dlhšie pri dlhých tónoch. */
-  private bell(freq: number, t: number, length: number): void {
+  /** Sláčik: pomalý nádych, jemné vibrato a dlhé doznenie v ozvene. */
+  private viol(freq: number, t: number, length: number): void {
     const ctx = this.ctx;
-    const decay = Math.min(3.5, 1.2 + length * 0.6);
-    for (const [mult, vol] of [
-      [1, 0.08],
-      [2, 0.02],
-      [3, 0.004],
+    const g = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 1100;
+    filter.Q.value = 0.7;
+    const end = t + Math.max(0.6, length - 0.1);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.034, t + Math.min(0.35, length * 0.4));
+    g.gain.setValueAtTime(0.034, end);
+    g.gain.linearRampToValueAtTime(0, end + 0.9);
+    g.connect(filter);
+    filter.connect(this.out);
+    filter.connect(this.echo);
+    const vibrato = ctx.createOscillator();
+    vibrato.frequency.value = 5.2;
+    const depth = ctx.createGain();
+    depth.gain.value = freq * 0.006;
+    vibrato.connect(depth);
+    for (const detune of [-4, 4]) {
+      const o = ctx.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.value = freq;
+      o.detune.value = detune;
+      depth.connect(o.frequency);
+      o.connect(g);
+      o.start(t);
+      o.stop(end + 1);
+    }
+    vibrato.start(t);
+    vibrato.stop(end + 1);
+  }
+
+  /** Umieračik: zvon s neharmonickými alikvotami, dlho doznieva. */
+  private knell(freq: number, t: number): void {
+    const ctx = this.ctx;
+    for (const [mult, vol, decay] of [
+      [0.5, 0.05, 6],
+      [1, 0.06, 4.5],
+      [1.19, 0.03, 3.5],
+      [1.56, 0.02, 2.6],
+      [2, 0.025, 2.2],
+      [2.66, 0.01, 1.4],
     ] as const) {
       const o = ctx.createOscillator();
       const g = ctx.createGain();
       o.type = 'sine';
       o.frequency.value = freq * mult;
       g.gain.setValueAtTime(0, t);
-      g.gain.linearRampToValueAtTime(vol, t + 0.012);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + decay / mult);
+      g.gain.linearRampToValueAtTime(vol, t + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + decay);
       o.connect(g);
       g.connect(this.out);
       g.connect(this.echo);

@@ -1,18 +1,18 @@
 import { CanvasSource, Container, Graphics, Texture } from 'pixi.js';
 import { TILE, Tile, tileAt, type Level, type World } from '@/game/level';
 import type { Art, WorldInfo } from './art';
-import { drawGirl, type GirlPose } from './girl';
+import { drawDoctor, type DoctorPose } from './doctor';
 import { decorOf, noise as pixelNoise, type PlayerFrame } from './common';
 
 /**
- * Siluetový štýl (v duchu hier Limbo a Badland): popredie je čierne, pozadie farebne žiari
- * a farbu má len to, čo svieti — lampáš, svetlušky, oči tieňov, vatra.
+ * Siluetový štýl (v duchu hier Limbo a Inside): popredie je čierne, pozadie tlmene žiari
+ * a farbu má len to, čo svieti — fakľa, uhlíky, sviečky, oči prízrakov a nakazených.
  */
 const INK = 0x05060b;
 const INK_CSS = '#05060b';
-const GLOW = '#fff6c8';
-const GOLD = '#ffd35a';
-const EMBER = '#ff8a3a';
+const GLOW = '#fff0c0';
+const GOLD = '#ffc24a';
+const EMBER = '#ff7a2a';
 
 type Ctx = CanvasRenderingContext2D;
 
@@ -53,7 +53,7 @@ function glowDot(ctx: Ctx, x: number, y: number, r: number, inner: string, outer
   ctx.fillRect(x - r, y - r, r * 2, r * 2);
 }
 
-// --- Postavička ---
+// --- Morový lekár ---
 const LEGS: Record<PlayerFrame, [number, number][]> = {
   idle: [
     [5.9, 0],
@@ -85,8 +85,8 @@ const LEGS: Record<PlayerFrame, [number, number][]> = {
   ],
 };
 
-/** Ako veje cop pri jednotlivých pohyboch. */
-const HAIR: Record<PlayerFrame, number> = {
+/** Ako viaje plášť pri jednotlivých pohyboch. */
+const CLOAK: Record<PlayerFrame, number> = {
   idle: 0,
   run0: 0.8,
   run1: 0.6,
@@ -97,31 +97,39 @@ const HAIR: Record<PlayerFrame, number> = {
 };
 
 function player(frame: PlayerFrame | 'breathe'): Texture {
-  const pose = breathePose(frame);
-  return paint(14, 17, (ctx) => drawGirl(ctx, pose));
+  const pose = doctorPose(frame);
+  return paint(14, 17, (ctx) => drawDoctor(ctx, pose));
 }
 
-function breathePose(frame: PlayerFrame | 'breathe'): GirlPose {
+function doctorPose(frame: PlayerFrame | 'breathe'): DoctorPose {
   const f = frame === 'breathe' ? 'idle' : frame;
   return {
     legs: LEGS[f]!,
     legEnd: f === 'jump' ? 14.6 : 15.4,
-    dy: frame === 'breathe' ? 0.4 : 0,
-    wave: HAIR[f]!,
+    dy: frame === 'breathe' ? 0.35 : 0,
+    wave: CLOAK[f]!,
   };
 }
 
-// --- Tiene a mory ---
+// --- Prízraky, nakazení a muchy ---
+/** Prízrak: kapucňa a potrhaný rubáš, ktorý sa stráca v cárach. */
 function shadeBody(ctx: Ctx, frame: number): void {
-  circle(ctx, 9, 7, 5.6);
-  for (let i = -1; i <= 1; i++) {
-    const x = 9 + i * 3;
-    const tipX = x + i * 0.8 + Math.sin(frame * 2.1 + i * 1.7) * 1.6;
-    const tipY = 15.5 + Math.cos(frame * 1.7 + i) * 1;
+  ctx.beginPath();
+  ctx.moveTo(9, 0.6);
+  ctx.quadraticCurveTo(13.8, 2.6, 14, 8.2);
+  ctx.quadraticCurveTo(14.2, 10.5, 15.2, 12);
+  ctx.lineTo(2.8, 12);
+  ctx.quadraticCurveTo(3.8, 10.5, 4, 8.2);
+  ctx.quadraticCurveTo(4.2, 2.6, 9, 0.6);
+  ctx.fill();
+  for (let i = -2; i <= 2; i++) {
+    const x = 9 + i * 2.4;
+    const tipX = x + i * 0.7 + Math.sin(frame * 2.1 + i * 1.7) * 1.4;
+    const tipY = 16.6 + Math.cos(frame * 1.7 + i) * 0.9 - Math.abs(i) * 0.9;
     ctx.beginPath();
-    ctx.moveTo(x - 2, 9.5);
-    ctx.quadraticCurveTo(x - 1.2, 13, tipX, tipY);
-    ctx.quadraticCurveTo(x + 1.4, 13, x + 2, 9.5);
+    ctx.moveTo(x - 1.5, 11);
+    ctx.quadraticCurveTo(x - 0.8, 14, tipX, tipY);
+    ctx.quadraticCurveTo(x + 1, 14, x + 1.5, 11);
     ctx.closePath();
     ctx.fill();
   }
@@ -133,98 +141,186 @@ function shade(frame: number, burning: boolean): Texture {
       ctx.shadowColor = EMBER;
       ctx.shadowBlur = 24;
     }
-    ctx.fillStyle = burning ? '#2a1420' : INK_CSS;
+    ctx.fillStyle = burning ? '#2a1410' : INK_CSS;
     shadeBody(ctx, frame);
+    // Tvár v kapucni je ešte čiernejšia diera.
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#000000';
+    ctx.beginPath();
+    ctx.ellipse(9.2, 7, 3.4, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
   });
 }
 
 function eyes(): Texture {
   return paint(18, 18, (ctx) => {
-    ctx.shadowColor = '#cfe8ff';
-    ctx.shadowBlur = 16;
-    ctx.fillStyle = '#eef8ff';
-    for (const x of [6.9, 11.6]) {
+    ctx.shadowColor = '#d8e4ff';
+    ctx.shadowBlur = 14;
+    ctx.fillStyle = '#eef2ff';
+    for (const x of [7.6, 10.9]) {
       ctx.beginPath();
-      ctx.ellipse(x, 6.8, 1.05, 0.8, 0, 0, Math.PI * 2);
+      ctx.ellipse(x, 6.9, 0.85, 0.5, 0, 0, Math.PI * 2);
       ctx.fill();
     }
   });
 }
 
+/** Nakazený: zhrbená postava s rukami ovisnutými dopredu, v handrách; 4 snímky chôdze. */
+function ghoul(frame: number, burning: boolean): Texture {
+  return paint(14, 17, (ctx) => {
+    if (burning) {
+      ctx.shadowColor = EMBER;
+      ctx.shadowBlur = 20;
+    }
+    ctx.fillStyle = burning ? '#2a1410' : INK_CSS;
+    ctx.strokeStyle = ctx.fillStyle;
+    const bob = frame % 2 === 0 ? 0 : 0.35;
+    const swing = [-1.4, 0, 1.4, 0][frame % 4]!;
+    // Nohy: jedna sa vlečie.
+    line(ctx, 6, 11.4, 6 + swing, 15.2, 1.05);
+    line(ctx, 7.6, 11.4, 7.6 - swing * 0.6, 15.2, 1.05);
+    // Telo predklonené, potrhaný odev.
+    ctx.beginPath();
+    ctx.moveTo(5, 5.4 + bob);
+    ctx.quadraticCurveTo(8.6, 4.6 + bob, 9.4, 6.6 + bob);
+    ctx.lineTo(9.2, 11.6);
+    ctx.lineTo(8.4, 12.4);
+    ctx.lineTo(7.6, 11.7);
+    ctx.lineTo(6.6, 12.5);
+    ctx.lineTo(5.6, 11.6);
+    ctx.lineTo(4.6, 12.2);
+    ctx.quadraticCurveTo(3.8, 8.4, 5, 5.4 + bob);
+    ctx.fill();
+    // Hlava nízko pred telom.
+    circle(ctx, 9.6, 5.2 + bob, 1.75);
+    // Ruky ovisnuté dopredu.
+    ctx.lineWidth = 0.85;
+    ctx.beginPath();
+    ctx.moveTo(8.6, 6.8 + bob);
+    ctx.quadraticCurveTo(10.6, 8 + bob, 11.4 - swing * 0.2, 10.4 + bob);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(7.6, 7 + bob);
+    ctx.quadraticCurveTo(9.4, 8.6 + bob, 10.2 + swing * 0.2, 10.9 + bob);
+    ctx.stroke();
+  });
+}
+
+/** Oči nakazených: chorobne žltozelené, svietia aj v tme (aby bolo vidieť, kde sú). */
+function ghoulEyes(): Texture {
+  return paint(14, 17, (ctx) => {
+    ctx.shadowColor = '#d8e070';
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = '#eef0a0';
+    circle(ctx, 10.4, 4.9, 0.42);
+    circle(ctx, 9.4, 5.1, 0.32);
+  });
+}
+
+/** Roj múch: tri muchy s priesvitnými krídlami. */
 function moth(frame: number): Texture {
   return paint(9, 7, (ctx) => {
-    ctx.fillStyle = 'rgba(214,204,178,0.85)';
     const up = frame === 0;
-    for (const side of [-1, 1]) {
+    for (const [x, y, s] of [
+      [2.6, 2.6, 0.9],
+      [6.2, 2, 0.75],
+      [4.6, 5, 0.8],
+    ] as const) {
+      ctx.fillStyle = 'rgba(190,196,200,0.55)';
+      for (const side of [-1, 1]) {
+        ctx.beginPath();
+        ctx.ellipse(
+          x + side * 0.9 * s,
+          y - (up ? 0.9 : 0.3) * s,
+          0.9 * s,
+          (up ? 0.6 : 0.4) * s,
+          side * (up ? 0.7 : 0.2),
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+      }
+      ctx.fillStyle = INK_CSS;
       ctx.beginPath();
-      ctx.ellipse(
-        4.5 + side * 2.2,
-        up ? 2.6 : 4,
-        2.3,
-        up ? 1.9 : 1.3,
-        side * (up ? 0.5 : 0.15),
-        0,
-        Math.PI * 2,
-      );
+      ctx.ellipse(x, y, 0.55 * s, 0.85 * s, 0, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.fillStyle = INK_CSS;
-    ctx.beginPath();
-    ctx.ellipse(4.5, 4.3, 0.9, 2, 0, 0, Math.PI * 2);
-    ctx.fill();
   });
 }
 
 // --- Svetlá a predmety ---
+/** Uhlík: žeravý kúsok smoly. */
 function firefly(): Texture {
-  return paint(3, 3, (ctx) => glowDot(ctx, 1.5, 1.5, 1.5, '#ffffe8', '#d9f56a'), 12);
+  return paint(
+    4,
+    4,
+    (ctx) => {
+      glowDot(ctx, 2, 2, 2, '#fff2c8', '#ff8a2a');
+      ctx.fillStyle = '#ffe0a0';
+      circle(ctx, 2, 2, 0.45);
+    },
+    12,
+  );
 }
 
 function spark(): Texture {
-  return paint(5, 5, (ctx) => glowDot(ctx, 2.5, 2.5, 2.5, '#fffbe0', GOLD), 10);
+  return paint(5, 5, (ctx) => glowDot(ctx, 2.5, 2.5, 2.5, '#fff6d8', EMBER), 10);
 }
 
+/** Relikvia: malý strieborno-zlatý krížik, slabo žiari. */
 function crystal(): Texture {
   return paint(9, 11, (ctx) => {
+    ctx.shadowColor = '#f4e2a8';
+    ctx.shadowBlur = 10;
     const g = ctx.createLinearGradient(0, 0, 9, 11);
-    g.addColorStop(0, '#f0ffff');
-    g.addColorStop(0.5, '#8ff0ff');
-    g.addColorStop(1, '#2f88b8');
+    g.addColorStop(0, '#fffbe8');
+    g.addColorStop(0.5, '#f0d890');
+    g.addColorStop(1, '#a88a40');
     ctx.fillStyle = g;
     ctx.beginPath();
-    ctx.moveTo(4.5, 0.4);
-    ctx.lineTo(8.5, 4.6);
-    ctx.lineTo(4.5, 10.6);
-    ctx.lineTo(0.5, 4.6);
-    ctx.closePath();
+    ctx.roundRect(3.6, 0.6, 1.8, 9.8, 0.5);
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
-    line(ctx, 0.5, 4.6, 8.5, 4.6, 0.4);
-    line(ctx, 4.5, 0.4, 3.2, 4.6, 0.4);
-    line(ctx, 3.2, 4.6, 4.5, 10.6, 0.4);
+    ctx.beginPath();
+    ctx.roundRect(1, 2.8, 7, 1.8, 0.5);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#7a2a20';
+    circle(ctx, 4.5, 3.7, 0.7);
   });
 }
 
+/** Kaplnka: drevená stieška s výklenkom, v ňom sviečka (zapálená = checkpoint). */
 function lantern(lit: boolean): Texture {
   return paint(10, 12, (ctx) => {
     ctx.fillStyle = INK_CSS;
     ctx.beginPath();
-    ctx.moveTo(3.2, 0.4);
-    ctx.lineTo(6.8, 0.4);
-    ctx.lineTo(8, 2.1);
-    ctx.lineTo(2, 2.1);
+    ctx.moveTo(5, 0.6);
+    ctx.lineTo(9.6, 3);
+    ctx.lineTo(0.4, 3);
     ctx.closePath();
     ctx.fill();
-    ctx.fillRect(2.3, 2, 5.4, 6.4);
-    ctx.fillRect(3, 8.2, 4, 1);
-    ctx.fillRect(4.3, 9, 1.4, 3);
+    ctx.fillRect(1.4, 2.8, 7.2, 6.6);
+    ctx.fillRect(4.2, 9, 1.6, 3);
+    // Krížik na streche.
+    ctx.fillRect(4.6, 0, 0.8, 1.4);
     if (lit) {
-      const g = ctx.createLinearGradient(0, 3, 0, 7.4);
+      const g = ctx.createRadialGradient(5, 6, 0.2, 5, 6, 3.2);
       g.addColorStop(0, GLOW);
-      g.addColorStop(1, GOLD);
+      g.addColorStop(0.6, GOLD);
+      g.addColorStop(1, '#a04a10');
       ctx.fillStyle = g;
-    } else ctx.fillStyle = '#1c2232';
-    ctx.fillRect(3.3, 3.1, 3.4, 4.3);
+    } else ctx.fillStyle = '#16131a';
+    ctx.beginPath();
+    ctx.roundRect(2.6, 4, 4.8, 4.6, [2.4, 2.4, 0.3, 0.3]);
+    ctx.fill();
+    ctx.fillStyle = lit ? '#f8f0d8' : '#2a2630';
+    ctx.fillRect(4.5, 6.4, 1, 2);
+    if (lit) {
+      ctx.fillStyle = '#fff8e0';
+      ctx.beginPath();
+      ctx.ellipse(5, 5.8, 0.4, 0.75, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
   });
 }
 
@@ -262,49 +358,36 @@ function flame(variant: number): Texture {
   });
 }
 
+/** Hranica: polená na seba krížom a kôl uprostred. */
 function campfire(): Texture {
-  return paint(24, 10, (ctx) => {
+  return paint(24, 14, (ctx) => {
     ctx.fillStyle = INK_CSS;
     ctx.strokeStyle = INK_CSS;
-    line(ctx, 4, 9, 15, 4.2, 2.2);
-    line(ctx, 16, 9, 6, 4.2, 2.2);
-    for (const [x, r] of [
-      [1.8, 1.8],
-      [5, 1.5],
-      [8.5, 1.7],
-      [12, 1.4],
-      [15.2, 1.8],
-      [18.4, 1.5],
-    ] as const)
-      circle(ctx, x, 10 - r * 0.7, r);
+    line(ctx, 10, 13.5, 10, 1, 1.4);
+    for (let layer = 0; layer < 4; layer++) {
+      const y = 13 - layer * 2.2;
+      const half = 9.5 - layer * 1.8;
+      line(ctx, 10 - half, y, 10 + half, y - 0.6, 1.9);
+      if (layer % 2 === 0)
+        for (const dx of [-half + 1, half - 1])
+          line(ctx, 10 + dx, y + 0.6, 10 + dx * 0.6, y - 1.6, 1.3);
+    }
   });
 }
 
+/** Odkaz na stene: doska na kolíku s namaľovaným morovým krížom. */
 function sign(): Texture {
   return paint(14, 16, (ctx) => {
     ctx.fillStyle = INK_CSS;
     ctx.fillRect(6.2, 8, 1.6, 8);
     ctx.beginPath();
-    ctx.roundRect(1, 1, 12, 7.6, 1);
+    ctx.roundRect(1, 1, 12, 7.6, 0.6);
     ctx.fill();
-    ctx.strokeStyle = GOLD;
-    ctx.shadowColor = GOLD;
-    ctx.shadowBlur = 10;
-    ctx.lineWidth = 0.6;
-    ctx.beginPath();
-    ctx.arc(7, 4.8, 1.2, 0, Math.PI * 2);
-    ctx.stroke();
-    for (let i = 0; i < 4; i++) {
-      const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
-      line(
-        ctx,
-        7 + Math.cos(a) * 1.9,
-        4.8 + Math.sin(a) * 1.9,
-        7 + Math.cos(a) * 2.8,
-        4.8 + Math.sin(a) * 2.8,
-        0.55,
-      );
-    }
+    ctx.strokeStyle = '#c0402a';
+    ctx.shadowColor = '#c0402a';
+    ctx.shadowBlur = 8;
+    line(ctx, 7, 2.2, 7, 7.4, 0.9);
+    line(ctx, 4, 4.4, 10, 4.4, 0.9);
   });
 }
 
@@ -319,16 +402,6 @@ function lightTile(): Texture {
     ctx.beginPath();
     ctx.roundRect(0.2, 0.6, 15.6, 4.4, 1.6);
     ctx.fill();
-    ctx.fillStyle = 'rgba(255,214,140,0.7)';
-    for (const [x, len] of [
-      [3.5, 2.2],
-      [8.5, 3.2],
-      [12.5, 1.4],
-    ] as const) {
-      ctx.beginPath();
-      ctx.roundRect(x - 0.5, 4.5, 1, len, 0.5);
-      ctx.fill();
-    }
   });
 }
 
@@ -338,7 +411,7 @@ function water(frame: number, world: World): Texture {
     ctx.beginPath();
     ctx.moveTo(0, 4);
     for (let x = 0; x <= TILE; x += 0.5)
-      ctx.lineTo(x, 1.4 + Math.sin(((x + frame * 4) * Math.PI) / 8) * 0.6);
+      ctx.lineTo(x, 1.4 + Math.sin(((x + frame * 4) * Math.PI) / 8) * 0.45);
     ctx.lineTo(TILE, 4);
     ctx.closePath();
     ctx.fillStyle = css(style.water);
@@ -347,89 +420,113 @@ function water(frame: number, world: World): Texture {
     ctx.lineWidth = 0.6;
     ctx.beginPath();
     for (let x = 0; x <= TILE; x += 0.5) {
-      const y = 1.4 + Math.sin(((x + frame * 4) * Math.PI) / 8) * 0.6;
+      const y = 1.4 + Math.sin(((x + frame * 4) * Math.PI) / 8) * 0.45;
       if (x === 0) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
     }
     ctx.stroke();
+    // Bubliny hniloby.
+    ctx.fillStyle = style.waterLine;
+    circle(ctx, 4 + frame * 6, 2.4, 0.35);
   });
 }
 
 const css = (color: number) => `#${color.toString(16).padStart(6, '0')}`;
 
-/** Skákacia huba: svietiaci klobúk (pri odraze stlačený). */
+/** Napnutá plachta (stará markíza): pri odraze sa prehne. */
 function bounce(squash: boolean): Texture {
   return paint(TILE, TILE, (ctx) => {
     ctx.fillStyle = INK_CSS;
-    ctx.fillRect(6.2, squash ? 7 : 6, 3.6, 10);
-    const capY = squash ? 7.5 : 5.5;
-    const g = ctx.createRadialGradient(8, capY - 2, 0.5, 8, capY, 9);
-    g.addColorStop(0, '#ffd8ff');
-    g.addColorStop(0.5, '#e070ff');
-    g.addColorStop(1, '#7a2cc0');
-    ctx.shadowColor = '#e070ff';
-    ctx.shadowBlur = 18;
-    ctx.fillStyle = g;
+    ctx.fillRect(1, 6, 1.4, 10);
+    ctx.fillRect(13.6, 6, 1.4, 10);
+    const sag = squash ? 3 : 1;
     ctx.beginPath();
-    ctx.ellipse(8, capY, 8, squash ? 3.2 : 4.6, 0, Math.PI, 0);
-    ctx.lineTo(16, capY + 0.8);
-    ctx.lineTo(0, capY + 0.8);
+    ctx.moveTo(0.4, 5.6);
+    ctx.quadraticCurveTo(8, 5.6 + sag * 2, 15.6, 5.6);
+    ctx.lineTo(15.6, 7.6);
+    ctx.quadraticCurveTo(8, 7.6 + sag * 2, 0.4, 7.6);
+    ctx.closePath();
+    const g = ctx.createLinearGradient(0, 0, 16, 0);
+    for (let i = 0; i < 6; i++) {
+      const color = i % 2 ? '#8a2a24' : '#3a1a1a';
+      g.addColorStop(i / 6, color);
+      g.addColorStop((i + 0.999) / 6, color);
+    }
+    ctx.fillStyle = g;
     ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = 'rgba(255,240,255,0.85)';
-    for (const [x, y, r] of [
-      [4.5, capY - 1.8, 0.9],
-      [9, capY - 3, 0.7],
-      [12, capY - 1.2, 0.8],
-    ] as const)
-      circle(ctx, x, y + (squash ? 0.8 : 0), r);
+    // Potrhaný lem.
+    ctx.fillStyle = '#3a1a1a';
+    for (let x = 1.5; x < 15; x += 2.6) {
+      const y = 7.4 + Math.sin((x / 16) * Math.PI) * sag * 1.6;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + 1.2, y + 1.4);
+      ctx.lineTo(x + 2.2, y);
+      ctx.fill();
+    }
   });
 }
 
-/** Cencúľ: priesvitný ľad (zachytáva svetlo), hrot dole. */
+/** Uvoľnený kus muriva: zubatý kameň (pri páde zabije). */
 function icicle(): Texture {
   return paint(6, 14, (ctx) => {
     const g = ctx.createLinearGradient(0, 0, 6, 0);
-    g.addColorStop(0, 'rgba(170,215,240,0.85)');
-    g.addColorStop(0.5, 'rgba(235,250,255,0.95)');
-    g.addColorStop(1, 'rgba(140,190,225,0.85)');
+    g.addColorStop(0, '#4a4650');
+    g.addColorStop(0.5, '#8a8490');
+    g.addColorStop(1, '#3a3640');
     ctx.fillStyle = g;
     ctx.beginPath();
-    ctx.moveTo(0.3, 0);
-    ctx.lineTo(5.7, 0);
-    ctx.lineTo(3.2, 13.8);
+    ctx.moveTo(0.2, 0);
+    ctx.lineTo(5.8, 0);
+    ctx.lineTo(5.2, 5);
+    ctx.lineTo(4.4, 7.6);
+    ctx.lineTo(3.4, 13.6);
+    ctx.lineTo(2.2, 9);
+    ctx.lineTo(0.8, 6.4);
     ctx.closePath();
     ctx.fill();
+    ctx.strokeStyle = '#1a181e';
+    line(ctx, 2.4, 1, 3.4, 4.6, 0.4);
+    line(ctx, 3.4, 4.6, 2.8, 7.4, 0.4);
   });
 }
 
-/** Pohyblivá plošina: čierna doska so žiariacimi runami. */
+/** Visiaca plošina: dosky so železnými kovaniami. */
 function mover(): Texture {
   return paint(32, 6, (ctx) => {
     ctx.fillStyle = INK_CSS;
     ctx.beginPath();
-    ctx.roundRect(0.2, 0.2, 31.6, 5, 1.6);
+    ctx.roundRect(0.2, 1.2, 31.6, 4.2, 0.8);
     ctx.fill();
-    ctx.fillStyle = '#8ff0ff';
-    ctx.shadowColor = '#8ff0ff';
-    ctx.shadowBlur = 10;
-    for (const x of [6, 16, 26]) circle(ctx, x, 2.7, 0.8);
+    ctx.strokeStyle = INK_CSS;
+    for (const x of [3, 29]) {
+      ctx.lineWidth = 0.6;
+      ctx.beginPath();
+      ctx.arc(x, 0.9, 0.8, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.fillStyle = '#9a7a4a';
+    ctx.shadowColor = '#9a7a4a';
+    ctx.shadowBlur = 6;
+    for (const x of [6, 16, 26]) circle(ctx, x, 3.3, 0.6);
   });
 }
 
+/** Zhnité dosky s prasklinami. */
 function crumble(): Texture {
   return paint(TILE, TILE, (ctx) => {
-    ctx.fillStyle = '#0e1019';
+    ctx.fillStyle = '#100c0a';
     ctx.beginPath();
-    ctx.roundRect(0.2, 0.2, 15.6, 15.6, 1.2);
+    ctx.roundRect(0.2, 0.2, 15.6, 15.6, 0.8);
     ctx.fill();
-    ctx.strokeStyle = '#3c4660';
-    ctx.lineWidth = 0.55;
+    ctx.strokeStyle = '#3a2a1c';
+    for (const y of [5.3, 10.6]) line(ctx, 0.5, y, 15.5, y, 0.5);
+    ctx.lineWidth = 0.5;
     for (const crack of [
-      [4, 0.5, 5, 3.5, 6.2, 6, 5.2, 8.5],
-      [11, 0.5, 10.2, 3.8, 11.8, 6.5, 12.6, 9],
-      [8, 8.5, 8.8, 11.5, 7.6, 15.5],
-      [2, 10, 4, 12.5, 3.5, 15.5],
+      [4, 0.5, 5, 2.5, 4.4, 5],
+      [11, 5.5, 10.2, 7.8, 11.6, 10.4],
+      [7, 11, 7.8, 13.2, 7, 15.5],
+      [13, 0.5, 12.6, 3, 13.4, 5],
     ]) {
       ctx.beginPath();
       ctx.moveTo(crack[0]!, crack[1]!);
@@ -439,15 +536,16 @@ function crumble(): Texture {
   });
 }
 
+/** Mesiac je biely; farbu (krvavú, chorobne zelenú) mu dáva renderer podľa sveta. */
 function moon(): Texture {
   return paint(
     26,
     26,
     (ctx) => {
-      glowDot(ctx, 13, 13, 13, 'rgba(230,236,255,0.5)', 'rgba(200,215,255,0.18)');
-      ctx.fillStyle = '#e6ecff';
+      glowDot(ctx, 13, 13, 13, 'rgba(255,255,255,0.5)', 'rgba(255,255,255,0.16)');
+      ctx.fillStyle = '#ffffff';
       circle(ctx, 13, 13, 8.5);
-      ctx.fillStyle = '#cdd6f2';
+      ctx.fillStyle = '#d8d8d8';
       circle(ctx, 10.5, 11, 1.8);
       circle(ctx, 15.5, 15, 1.2);
       circle(ctx, 14.5, 9.5, 0.9);
@@ -461,115 +559,73 @@ interface WorldStyle {
   sky: string[];
   stars: string;
   far: string;
-  farShape: 'hills' | 'jagged' | 'peaks' | 'ruins';
+  farShape: 'hills' | 'city' | 'ossuary' | 'gothic';
   fog: string;
   near: string;
-  nearShape: 'trees' | 'stalagmites' | 'deadtrees' | 'pines' | 'pillars' | 'spires';
+  nearShape: 'houses' | 'crypt' | 'graves' | 'pillars';
   water: number;
   waterLine: string;
-  top: 'grass' | 'moss' | 'reeds' | 'snow' | 'stone' | 'spikes';
-  under: 'roots' | 'stalactites' | 'icicles' | 'chains';
+  top: 'cobbles' | 'bones' | 'grass' | 'stone';
+  under: 'roots' | 'stalactites' | 'chains';
   info: WorldInfo;
 }
 
 const WORLDS: Record<World, WorldStyle> = {
-  forest: {
-    sky: ['#120c2a', '#2a2350', '#3d5a7c', '#86b0aa'],
-    stars: 'rgba(235,235,255,0.75)',
-    far: '#1a2b44',
+  quarter: {
+    sky: ['#060409', '#160d12', '#3a1e1a', '#7a3a22'],
+    stars: 'rgba(230,210,200,0.35)',
+    far: '#1e1316',
+    farShape: 'city',
+    fog: 'rgba(140,70,40,0.4)',
+    near: '#0e0a0e',
+    nearShape: 'houses',
+    water: 0x14170a,
+    waterLine: '#6a7a34',
+    top: 'cobbles',
+    under: 'chains',
+    info: { darkness: 0.84, moon: true, moonTint: 0xe8a088, ambient: 'rain' },
+  },
+  catacombs: {
+    sky: ['#040303', '#0e0b0a', '#1e1714', '#3a2a1e'],
+    stars: 'rgba(200,180,150,0.12)',
+    far: '#1c1612',
+    farShape: 'ossuary',
+    fog: 'rgba(90,70,50,0.35)',
+    near: '#0e0b0a',
+    nearShape: 'crypt',
+    water: 0x1a1808,
+    waterLine: '#8a8436',
+    top: 'bones',
+    under: 'stalactites',
+    info: { darkness: 0.88, moon: false, moonTint: 0xffffff, ambient: 'dust' },
+  },
+  pits: {
+    sky: ['#050607', '#10161a', '#22302e', '#4a5a3c'],
+    stars: 'rgba(210,225,200,0.4)',
+    far: '#18221c',
     farShape: 'hills',
-    fog: 'rgba(110,150,170,0.45)',
-    near: '#0b1322',
-    nearShape: 'trees',
-    water: 0x0b2a38,
-    waterLine: '#7fd0e0',
+    fog: 'rgba(120,150,100,0.45)',
+    near: '#0c110f',
+    nearShape: 'graves',
+    water: 0x161a0c,
+    waterLine: '#8a9a4a',
     top: 'grass',
     under: 'roots',
-    info: { darkness: 0.8, moon: true, ambient: 'motes' },
+    info: { darkness: 0.84, moon: true, moonTint: 0xd0e0b0, ambient: 'wisps' },
   },
-  caves: {
-    sky: ['#04070f', '#081628', '#0f3346', '#1d5a68'],
-    stars: 'rgba(120,220,230,0.6)',
-    far: '#0c1b2b',
-    farShape: 'jagged',
-    fog: 'rgba(40,110,130,0.45)',
-    near: '#060d17',
-    nearShape: 'stalagmites',
-    water: 0x0b2a38,
-    waterLine: '#7fd0e0',
-    top: 'moss',
-    under: 'stalactites',
-    info: { darkness: 0.88, moon: false, ambient: 'motes' },
-  },
-  swamp: {
-    sky: ['#081210', '#142a24', '#2a4c40', '#7a9c6c'],
-    stars: 'rgba(200,255,190,0.55)',
-    far: '#13261d',
-    farShape: 'hills',
-    fog: 'rgba(130,180,120,0.5)',
-    near: '#07110c',
-    nearShape: 'deadtrees',
-    water: 0x0e2616,
-    waterLine: '#9ad08a',
-    top: 'reeds',
-    under: 'roots',
-    info: { darkness: 0.84, moon: true, ambient: 'wisps' },
-  },
-  ice: {
-    sky: ['#0b1530', '#1d3864', '#5682ac', '#c4dcee'],
-    stars: 'rgba(240,250,255,0.8)',
-    far: '#284262',
-    farShape: 'peaks',
-    fog: 'rgba(200,225,245,0.45)',
-    near: '#0e192b',
-    nearShape: 'pines',
-    water: 0x12304a,
-    waterLine: '#cfeeff',
-    top: 'snow',
-    under: 'icicles',
-    info: { darkness: 0.74, moon: true, ambient: 'snow' },
-  },
-  tower: {
-    sky: ['#09070f', '#1a162c', '#372d4c', '#66566c'],
-    stars: 'rgba(230,220,255,0.6)',
-    far: '#151128',
-    farShape: 'ruins',
-    fog: 'rgba(140,120,160,0.4)',
-    near: '#09070f',
+  cathedral: {
+    sky: ['#050407', '#120d16', '#261a2c', '#4a2c3a'],
+    stars: 'rgba(220,200,230,0.15)',
+    far: '#1a1320',
+    farShape: 'gothic',
+    fog: 'rgba(120,70,90,0.35)',
+    near: '#0e0a10',
     nearShape: 'pillars',
-    water: 0x16122a,
-    waterLine: '#b0a0d0',
+    water: 0x1a0c10,
+    waterLine: '#a05a5a',
     top: 'stone',
     under: 'chains',
-    info: { darkness: 0.85, moon: true, ambient: 'dust' },
-  },
-  abyss: {
-    sky: ['#040106', '#170610', '#3a0d1a', '#762824'],
-    stars: 'rgba(255,140,110,0.6)',
-    far: '#18050e',
-    farShape: 'jagged',
-    fog: 'rgba(160,50,40,0.4)',
-    near: '#090205',
-    nearShape: 'spires',
-    water: 0x2a0812,
-    waterLine: '#ff7a5a',
-    top: 'spikes',
-    under: 'stalactites',
-    info: { darkness: 0.92, moon: false, ambient: 'embers' },
-  },
-  storm: {
-    sky: ['#040509', '#10141f', '#222a3a', '#46506a'],
-    stars: 'rgba(200,210,235,0.25)',
-    far: '#141a28',
-    farShape: 'jagged',
-    fog: 'rgba(120,135,165,0.35)',
-    near: '#070a12',
-    nearShape: 'deadtrees',
-    water: 0x0c1622,
-    waterLine: '#a8c0e0',
-    top: 'grass',
-    under: 'roots',
-    info: { darkness: 0.9, moon: false, ambient: 'rain' },
+    info: { darkness: 0.86, moon: false, moonTint: 0xffffff, ambient: 'embers' },
   },
 };
 
@@ -584,11 +640,10 @@ function sky(world: World): Texture {
       style.sky.forEach((c, i) => g.addColorStop(i / (style.sky.length - 1), c));
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, 320, 240);
-      // Hviezdy (v jaskyni kryštáliky, v priepasti iskry).
-      for (let i = 0; i < 70; i++) {
+      for (let i = 0; i < 60; i++) {
         const x = pixelNoise(i, 1, 201) * 320;
-        const y = pixelNoise(i, 2, 201) * 170;
-        const r = 0.3 + pixelNoise(i, 3, 201) * 0.6;
+        const y = pixelNoise(i, 2, 201) * 160;
+        const r = 0.3 + pixelNoise(i, 3, 201) * 0.5;
         ctx.fillStyle = style.stars;
         circle(ctx, x, y, r);
       }
@@ -610,6 +665,24 @@ function wrapped(width: number, draw: (offset: number) => void): void {
   for (const offset of [-width, 0, width]) draw(offset);
 }
 
+/** Krivý dom so štítovou strechou a občas komínom. */
+function house(ctx: Ctx, x: number, base: number, w: number, h: number, seed: number): void {
+  const lean = (pixelNoise(seed, 1, 271) - 0.5) * 2.4;
+  const roof = w * (0.45 + pixelNoise(seed, 2, 271) * 0.35);
+  ctx.beginPath();
+  ctx.moveTo(x, base);
+  ctx.lineTo(x + lean * 0.3, base - h);
+  ctx.lineTo(x + w / 2 + lean, base - h - roof);
+  ctx.lineTo(x + w + lean * 0.3, base - h);
+  ctx.lineTo(x + w, base);
+  ctx.closePath();
+  ctx.fill();
+  if (pixelNoise(seed, 3, 271) < 0.6) {
+    const cx = x + w * (0.2 + pixelNoise(seed, 4, 271) * 0.5);
+    ctx.fillRect(cx, base - h - roof * 0.8, 2.6, roof * 0.6);
+  }
+}
+
 function far(world: World): Texture {
   const W = 480;
   const H = 110;
@@ -619,67 +692,116 @@ function far(world: World): Texture {
     H,
     (ctx) => {
       ctx.fillStyle = style.far;
-      if (style.farShape === 'peaks') {
-        // Štíty so snehovými čiapkami.
-        const peaks = 7;
-        for (let i = 0; i < peaks; i++) {
-          const cx = (i + pixelNoise(i, 0, 231) * 0.5) * (W / peaks);
-          const h = H * (0.55 + pixelNoise(i, 1, 231) * 0.4);
-          const w = 45 + pixelNoise(i, 2, 231) * 30;
+      ctx.strokeStyle = style.far;
+      if (style.farShape === 'city') {
+        // Strechy mesta, veže kostolov a pár oblokov, kde ešte niekto svieti.
+        let x = 0;
+        let i = 0;
+        while (x < W) {
+          const w = 16 + pixelNoise(i, 0, 281) * 26;
+          const h = H * (0.3 + pixelNoise(i, 1, 281) * 0.3);
+          const xi = x;
+          const ii = i;
           wrapped(W, (o) => {
             ctx.fillStyle = style.far;
-            ctx.beginPath();
-            ctx.moveTo(cx + o - w, H);
-            ctx.lineTo(cx + o, H - h);
-            ctx.lineTo(cx + o + w, H);
-            ctx.fill();
-            ctx.fillStyle = 'rgba(220,236,250,0.75)';
-            ctx.beginPath();
-            ctx.moveTo(cx + o, H - h);
-            ctx.lineTo(cx + o + w * 0.22, H - h * 0.78);
-            ctx.lineTo(cx + o + w * 0.08, H - h * 0.8);
-            ctx.lineTo(cx + o - w * 0.05, H - h * 0.74);
-            ctx.lineTo(cx + o - w * 0.2, H - h * 0.8);
-            ctx.closePath();
-            ctx.fill();
-          });
-        }
-      } else if (style.farShape === 'ruins') {
-        // Panoráma rozpadnutých veží a cimburia s občasným svietiacim oknom.
-        for (let i = 0; i < 12; i++) {
-          const cx = (i + pixelNoise(i, 0, 241) * 0.6) * (W / 12);
-          const h = H * (0.35 + pixelNoise(i, 1, 241) * 0.55);
-          const w = 14 + pixelNoise(i, 2, 241) * 18;
-          wrapped(W, (o) => {
-            const x = cx + o;
-            ctx.fillStyle = style.far;
-            ctx.fillRect(x - w / 2, H - h, w, h);
-            for (let k = 0; k < 4; k++)
-              if (k % 2 === 0) ctx.fillRect(x - w / 2 + (k * w) / 4, H - h - 4, w / 4, 4);
-            if (pixelNoise(i, 3, 241) < 0.6) {
-              ctx.fillStyle = 'rgba(255,200,120,0.45)';
-              ctx.beginPath();
-              ctx.roundRect(x - 1.5, H - h + 8, 3, 6, [1.5, 1.5, 0, 0]);
-              ctx.fill();
+            house(ctx, xi + o, H, w, h, ii);
+            if (pixelNoise(ii, 5, 281) < 0.35) {
+              ctx.fillStyle = 'rgba(255,160,80,0.4)';
+              ctx.fillRect(xi + o + w * 0.4, H - h * 0.7, 2, 3);
             }
           });
+          x += w * (0.8 + pixelNoise(i, 2, 281) * 0.3);
+          i++;
         }
-        ctx.fillStyle = style.far;
-        ctx.fillRect(0, H * 0.75, W, H * 0.25);
+        for (const cx of [90, 260, 400]) {
+          const h = H * (0.75 + pixelNoise(cx, 1, 282) * 0.15);
+          wrapped(W, (o) => {
+            ctx.fillStyle = style.far;
+            ctx.fillRect(cx + o - 7, H - h * 0.6, 14, h * 0.6);
+            ctx.beginPath();
+            ctx.moveTo(cx + o - 8, H - h * 0.6);
+            ctx.lineTo(cx + o, H - h);
+            ctx.lineTo(cx + o + 8, H - h * 0.6);
+            ctx.fill();
+            ctx.fillRect(cx + o - 0.4, H - h - 6, 0.8, 6);
+            ctx.fillRect(cx + o - 2, H - h - 4.4, 4, 0.8);
+          });
+        }
+        // Dym z hraníc stúpa nad strechy.
+        for (let k = 0; k < 3; k++) {
+          const sx = 60 + pixelNoise(k, 1, 283) * (W - 120);
+          const g = ctx.createLinearGradient(0, H * 0.1, 0, H * 0.7);
+          g.addColorStop(0, 'rgba(60,40,36,0)');
+          g.addColorStop(1, 'rgba(60,40,36,0.35)');
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.moveTo(sx - 4, H * 0.7);
+          ctx.quadraticCurveTo(sx - 10, H * 0.35, sx + 6, H * 0.08);
+          ctx.quadraticCurveTo(sx + 14, H * 0.4, sx + 6, H * 0.7);
+          ctx.fill();
+        }
+      } else if (style.farShape === 'ossuary') {
+        // Stena kostnice: rady klenutých výklenkov plných lebiek.
+        ctx.fillRect(0, H * 0.15, W, H * 0.85);
+        for (let row = 0; row < 3; row++) {
+          for (let k = 0; k < 16; k++) {
+            const nx = k * 30 + (row % 2) * 15 + 6;
+            const ny = H * 0.25 + row * 26;
+            ctx.fillStyle = 'rgba(0,0,0,0.55)';
+            ctx.beginPath();
+            ctx.roundRect(nx, ny, 18, 20, [9, 9, 0, 0]);
+            ctx.fill();
+            ctx.fillStyle = 'rgba(190,175,150,0.16)';
+            for (let s = 0; s < 3; s++) {
+              circle(ctx, nx + 4 + s * 5, ny + 15, 2.1);
+              circle(ctx, nx + 6.5 + s * 5 - (s === 2 ? 5 : 0), ny + 10.5, 2);
+            }
+          }
+        }
+      } else if (style.farShape === 'gothic') {
+        // Hlavná loď: lomené okná s vitrážami, ktoré len slabo presvitajú.
+        ctx.fillRect(0, 0, W, H);
+        const glass = ['rgba(150,40,50,0.45)', 'rgba(50,60,140,0.4)', 'rgba(140,110,50,0.4)'];
+        for (let k = 0; k < 8; k++) {
+          const cx = k * 60 + 30;
+          const top = H * 0.08;
+          const bottom = H * 0.72;
+          const w = 16;
+          const g = ctx.createLinearGradient(0, top, 0, bottom);
+          g.addColorStop(0, glass[k % 3]!);
+          g.addColorStop(1, 'rgba(40,20,30,0.25)');
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.moveTo(cx - w / 2, bottom);
+          ctx.lineTo(cx - w / 2, top + w);
+          ctx.quadraticCurveTo(cx - w / 2, top, cx, top - 4);
+          ctx.quadraticCurveTo(cx + w / 2, top, cx + w / 2, top + w);
+          ctx.lineTo(cx + w / 2, bottom);
+          ctx.closePath();
+          ctx.fill();
+          // Olovené priečky.
+          line(ctx, cx, top, cx, bottom, 1.2);
+          for (let y = top + 14; y < bottom; y += 12) line(ctx, cx - w / 2, y, cx + w / 2, y, 0.9);
+        }
       } else {
+        // Kopce s krížmi na hrebeni.
+        const ridge = (x: number) => {
+          const a = (x / W) * Math.PI * 2;
+          return H * (0.42 + 0.14 * Math.sin(a * 2 + 1) + 0.07 * Math.sin(a * 5 + 2));
+        };
         ctx.beginPath();
         ctx.moveTo(0, H);
-        for (let x = 0; x <= W; x += 2) {
-          const a = (x / W) * Math.PI * 2;
-          const h =
-            style.farShape === 'jagged'
-              ? H * (0.5 + 0.18 * Math.sin(a * 3 + 1) + 0.12 * Math.abs(Math.sin(a * 11 + 2)))
-              : H * (0.45 + 0.15 * Math.sin(a * 2 + 1) + 0.08 * Math.sin(a * 5 + 2));
-          ctx.lineTo(x, H - h);
-        }
+        for (let x = 0; x <= W; x += 2) ctx.lineTo(x, H - ridge(x));
         ctx.lineTo(W, H);
         ctx.closePath();
         ctx.fill();
+        for (let k = 0; k < 26; k++) {
+          const x = pixelNoise(k, 1, 291) * W;
+          const y = H - ridge(x) + 1;
+          const s = 3 + pixelNoise(k, 2, 291) * 3;
+          ctx.fillRect(x - 0.4, y - s, 0.8, s);
+          ctx.fillRect(x - s * 0.3, y - s * 0.75, s * 0.6, 0.7);
+        }
       }
       // Hmla pri zemi.
       ctx.globalCompositeOperation = 'source-atop';
@@ -694,29 +816,42 @@ function far(world: World): Texture {
   );
 }
 
-function spruce(ctx: Ctx, x: number, base: number, h: number, snow: boolean): void {
-  ctx.fillRect(x - 1.2, base - h * 0.55, 2.4, h * 0.55);
-  for (let layer = 0; layer < 4; layer++) {
-    const top = base - h + layer * h * 0.17;
-    const lw = 4 + layer * 3.4;
+function deadTree(ctx: Ctx, x: number, base: number, h: number, seed: number): void {
+  ctx.lineWidth = 2.6;
+  ctx.beginPath();
+  ctx.moveTo(x, base);
+  ctx.quadraticCurveTo(x - 3, base - h * 0.5, x + 2, base - h);
+  ctx.stroke();
+  ctx.lineWidth = 1.2;
+  for (let b = 0; b < 4; b++) {
+    const by = base - h * (0.45 + b * 0.13);
+    const dir = b % 2 === 0 ? 1 : -1;
+    const len = 8 + pixelNoise(seed, b + 2, 251) * 10;
     ctx.beginPath();
-    ctx.moveTo(x, top);
-    ctx.quadraticCurveTo(x + lw * 0.5, top + h * 0.12, x + lw, top + h * 0.24);
-    ctx.lineTo(x - lw, top + h * 0.24);
-    ctx.quadraticCurveTo(x - lw * 0.5, top + h * 0.12, x, top);
-    ctx.fill();
-    if (snow) {
-      const fill = ctx.fillStyle;
-      ctx.fillStyle = 'rgba(225,240,252,0.8)';
-      ctx.beginPath();
-      ctx.moveTo(x, top);
-      ctx.quadraticCurveTo(x + lw * 0.3, top + h * 0.06, x + lw * 0.55, top + h * 0.11);
-      ctx.lineTo(x - lw * 0.55, top + h * 0.11);
-      ctx.quadraticCurveTo(x - lw * 0.3, top + h * 0.06, x, top);
-      ctx.fill();
-      ctx.fillStyle = fill;
-    }
+    ctx.moveTo(x, by);
+    ctx.quadraticCurveTo(x + dir * len * 0.6, by - 4, x + dir * len, by - 9);
+    ctx.stroke();
   }
+}
+
+/** Šibenica so slučkou. */
+function gallows(ctx: Ctx, x: number, base: number, h: number): void {
+  ctx.fillRect(x - 1.2, base - h, 2.4, h);
+  ctx.fillRect(x - 1.2, base - h, h * 0.5, 2);
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(x + 1, base - h * 0.78);
+  ctx.lineTo(x + h * 0.2, base - h + 1.5);
+  ctx.stroke();
+  ctx.lineWidth = 0.6;
+  const rx = x + h * 0.42;
+  ctx.beginPath();
+  ctx.moveTo(rx, base - h + 1.5);
+  ctx.lineTo(rx, base - h * 0.62);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.ellipse(rx, base - h * 0.58, 1.3, 2, 0, 0, Math.PI * 2);
+  ctx.stroke();
 }
 
 function near(world: World): Texture {
@@ -728,149 +863,133 @@ function near(world: World): Texture {
     H,
     (ctx) => {
       ctx.fillStyle = style.near;
+      ctx.strokeStyle = style.near;
       const shape = style.nearShape;
-      if (shape === 'stalagmites' || shape === 'spires') {
-        // Stalagmity (v priepasti ostré veže).
-        const n = shape === 'spires' ? 16 : 22;
-        for (let i = 0; i < n; i++) {
-          const cx = (i + pixelNoise(i, 0, 211) * 0.7) * (W / n);
-          const h = H * (0.3 + pixelNoise(i, 1, 211) * 0.65);
-          const w = (shape === 'spires' ? 3 : 4) + pixelNoise(i, 2, 211) * 8;
+      if (shape === 'houses') {
+        // Krivé domy tesne pri sebe, medzi nimi uličky a šibenica.
+        let x = 0;
+        let i = 0;
+        while (x < W - 40) {
+          const w = 26 + pixelNoise(i, 0, 301) * 30;
+          const h = H * (0.5 + pixelNoise(i, 1, 301) * 0.3);
+          const xi = x;
+          const ii = i;
           wrapped(W, (o) => {
-            ctx.beginPath();
-            ctx.moveTo(cx + o - w, H);
-            if (shape === 'spires') {
-              ctx.lineTo(cx + o - w * 0.2, H - h * 0.6);
-              ctx.lineTo(cx + o, H - h);
-              ctx.lineTo(cx + o + w * 0.25, H - h * 0.55);
-            } else {
-              ctx.quadraticCurveTo(cx + o - w * 0.3, H - h * 0.5, cx + o, H - h);
-              ctx.quadraticCurveTo(cx + o + w * 0.3, H - h * 0.5, cx + o + w, H);
+            house(ctx, xi + o, H, w, h, ii + 50);
+            // Vývesný štít na ráme.
+            if (pixelNoise(ii, 6, 301) < 0.4) {
+              ctx.fillRect(xi + o + w - 2, H - h * 0.55, 8, 1);
+              ctx.fillRect(xi + o + w + 2, H - h * 0.55, 4, 4);
             }
-            ctx.lineTo(cx + o + w, H);
+          });
+          x += w + (pixelNoise(i, 2, 301) < 0.3 ? 30 : 4);
+          i++;
+        }
+        wrapped(W, (o) => gallows(ctx, o + W - 22, H, H * 0.55));
+      } else if (shape === 'crypt') {
+        // Nízke oblúky krypty, kopy lebiek a pavučiny.
+        const n = 7;
+        for (let k = 0; k < n; k++) {
+          const cx = k * (W / n) + 12;
+          wrapped(W, (o) => {
+            const x = cx + o;
+            ctx.fillRect(x - 6, H * 0.25, 12, H * 0.75);
+            ctx.beginPath();
+            ctx.moveTo(x + 6, H * 0.25);
+            ctx.lineTo(x + W / n - 6, H * 0.25);
+            ctx.lineTo(x + W / n - 6, H * 0.25 + 18);
+            ctx.quadraticCurveTo(x + W / n / 2, H * 0.25 - 10, x + 6, H * 0.25 + 18);
             ctx.fill();
           });
         }
-        if (shape === 'spires') {
-          // Vznášajúce sa balvany.
-          for (let i = 0; i < 5; i++) {
-            const cx = pixelNoise(i, 5, 213) * W;
-            const cy = H * (0.15 + pixelNoise(i, 6, 213) * 0.35);
-            const r = 4 + pixelNoise(i, 7, 213) * 6;
-            wrapped(W, (o) => {
-              ctx.beginPath();
-              ctx.moveTo(cx + o - r, cy);
-              ctx.lineTo(cx + o + r, cy - r * 0.3);
-              ctx.lineTo(cx + o + r * 0.4, cy + r * 1.2);
-              ctx.closePath();
-              ctx.fill();
-            });
-          }
-        }
-      } else if (shape === 'deadtrees') {
-        // Holé stromy s visiacim machom a pálky v trstine.
-        for (let i = 0; i < 12; i++) {
-          const cx = (i + pixelNoise(i, 0, 251) * 0.6) * (W / 12);
-          const h = H * (0.5 + pixelNoise(i, 1, 251) * 0.45);
+        ctx.fillRect(0, 0, W, H * 0.26);
+        for (let k = 0; k < 9; k++) {
+          const cx = pixelNoise(k, 1, 311) * W;
+          const r = 10 + pixelNoise(k, 2, 311) * 10;
           wrapped(W, (o) => {
-            const x = cx + o;
-            ctx.strokeStyle = style.near;
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(x, H);
-            ctx.quadraticCurveTo(x - 3, H - h * 0.5, x + 2, H - h);
-            ctx.stroke();
-            ctx.lineWidth = 1.4;
-            for (let b = 0; b < 4; b++) {
-              const by = H - h * (0.45 + b * 0.13);
-              const dir = b % 2 === 0 ? 1 : -1;
-              const len = 8 + pixelNoise(i, b + 2, 251) * 10;
-              ctx.beginPath();
-              ctx.moveTo(x, by);
-              ctx.quadraticCurveTo(x + dir * len * 0.6, by - 4, x + dir * len, by - 9);
-              ctx.stroke();
-              // Mach.
-              ctx.lineWidth = 0.8;
-              ctx.beginPath();
-              ctx.moveTo(x + dir * len * 0.6, by - 3);
-              ctx.lineTo(x + dir * len * 0.6, by + 6 + pixelNoise(i, b, 252) * 8);
-              ctx.stroke();
-              ctx.lineWidth = 1.4;
+            for (let s = 0; s < 7; s++) {
+              const sx = cx + o + (pixelNoise(k, s, 312) - 0.5) * r * 1.6;
+              const sy = H - pixelNoise(k, s, 313) * r * 0.8;
+              circle(ctx, sx, sy, 2.2);
             }
           });
         }
-        for (let i = 0; i < 40; i++) {
-          const x = pixelNoise(i, 8, 253) * W;
-          const h = 10 + pixelNoise(i, 9, 253) * 18;
+        ctx.lineWidth = 0.35;
+        for (let k = 0; k < 6; k++) {
+          const x = pixelNoise(k, 4, 314) * W;
+          ctx.beginPath();
+          ctx.moveTo(x, H * 0.26);
+          ctx.quadraticCurveTo(x + 4, H * 0.36, x + 10, H * 0.3);
+          ctx.moveTo(x + 3, H * 0.26);
+          ctx.lineTo(x + 5, H * 0.4);
+          ctx.stroke();
+        }
+      } else if (shape === 'graves') {
+        // Náhrobky, kríže (niektoré nakrivo), holé stromy a šibenica.
+        for (let k = 0; k < 7; k++) {
+          const cx = (k + pixelNoise(k, 0, 321) * 0.6) * (W / 7);
+          const h = H * (0.5 + pixelNoise(k, 1, 321) * 0.4);
+          wrapped(W, (o) => deadTree(ctx, cx + o, H, h, k));
+        }
+        for (let k = 0; k < 30; k++) {
+          const x = pixelNoise(k, 2, 322) * W;
+          const kind = pixelNoise(k, 3, 322);
+          const s = 6 + pixelNoise(k, 4, 322) * 9;
+          const tilt = (pixelNoise(k, 5, 322) - 0.5) * 0.5;
           wrapped(W, (o) => {
-            ctx.fillRect(x + o - 0.4, H - h, 0.8, h);
-            if (pixelNoise(i, 10, 253) < 0.5) {
+            ctx.save();
+            ctx.translate(x + o, H - 2);
+            ctx.rotate(tilt);
+            if (kind < 0.5) {
+              ctx.fillRect(-0.8, -s * 1.3, 1.6, s * 1.3);
+              ctx.fillRect(-s * 0.4, -s, s * 0.8, 1.5);
+            } else {
               ctx.beginPath();
-              ctx.ellipse(x + o, H - h + 2, 1.1, 2.6, 0, 0, Math.PI * 2);
+              ctx.roundRect(-s * 0.35, -s, s * 0.7, s + 2, [s * 0.35, s * 0.35, 0, 0]);
               ctx.fill();
             }
+            ctx.restore();
           });
         }
-      } else if (shape === 'pillars') {
-        // Stĺporadie s oblúkmi, niektoré stĺpy zlomené.
+        wrapped(W, (o) => gallows(ctx, o + 150, H, H * 0.6));
+      } else {
+        // Stĺporadie s oblúkmi, niektoré stĺpy zlomené; visiace lustre.
         const n = 8;
-        for (let i = 0; i < n; i++) {
-          const cx = i * (W / n) + 10;
-          const broken = pixelNoise(i, 1, 261) < 0.35;
-          const h = broken ? H * (0.35 + pixelNoise(i, 2, 261) * 0.3) : H * 0.92;
+        for (let k = 0; k < n; k++) {
+          const cx = k * (W / n) + 10;
+          const broken = pixelNoise(k, 1, 261) < 0.3;
+          const h = broken ? H * (0.35 + pixelNoise(k, 2, 261) * 0.3) : H * 0.92;
           wrapped(W, (o) => {
             const x = cx + o;
             ctx.fillRect(x - 5, H - h, 10, h);
             ctx.fillRect(x - 7, H - h, 14, 3);
             ctx.fillRect(x - 7, H - 6, 14, 6);
             if (!broken) {
-              // Oblúk k ďalšiemu stĺpu.
               ctx.beginPath();
               ctx.moveTo(x + 5, H - h);
               ctx.lineTo(x + W / n - 5, H - h);
-              ctx.lineTo(x + W / n - 5, H - h + 14);
-              ctx.quadraticCurveTo(x + W / n / 2, H - h - 6, x + 5, H - h + 14);
+              ctx.lineTo(x + W / n - 5, H - h + 16);
+              ctx.quadraticCurveTo(x + W / n / 2, H - h - 10, x + 5, H - h + 16);
               ctx.fill();
             }
           });
         }
-        // Visiace reťaze.
-        ctx.strokeStyle = style.near;
         ctx.lineWidth = 0.8;
-        for (let i = 0; i < 6; i++) {
-          const x = pixelNoise(i, 4, 262) * W;
-          const len = 20 + pixelNoise(i, 5, 262) * 40;
+        for (let k = 0; k < 4; k++) {
+          const x = 30 + pixelNoise(k, 4, 262) * (W - 60);
+          const len = 24 + pixelNoise(k, 5, 262) * 30;
           ctx.beginPath();
           ctx.moveTo(x, 0);
           ctx.lineTo(x, len);
           ctx.stroke();
-        }
-      } else {
-        // Smreky a okrúhle koruny listnáčov (v snehu zasnežené smreky).
-        const snow = shape === 'pines';
-        for (let i = 0; i < 18; i++) {
-          const cx = (i + pixelNoise(i, 0, 221) * 0.6) * (W / 18);
-          const h = H * (0.55 + pixelNoise(i, 1, 221) * 0.4);
-          const round = !snow && pixelNoise(i, 3, 221) < 0.3;
-          wrapped(W, (o) => {
-            const x = cx + o;
-            if (round) {
-              ctx.fillRect(x - 1.2, H - h * 0.55, 2.4, h * 0.55);
-              circle(ctx, x, H - h * 0.75, h * 0.2);
-              circle(ctx, x - h * 0.12, H - h * 0.62, h * 0.15);
-              circle(ctx, x + h * 0.13, H - h * 0.64, h * 0.16);
-              return;
-            }
-            spruce(ctx, x, H, h, snow);
-          });
+          ctx.beginPath();
+          ctx.ellipse(x, len + 1.5, 7, 1.6, 0, 0, Math.PI * 2);
+          ctx.fill();
+          for (const dx of [-6, -2, 2, 6]) ctx.fillRect(x + dx - 0.4, len - 2.4, 0.8, 2.6);
         }
       }
       ctx.fillStyle = style.near;
       ctx.fillRect(0, H * 0.9, W, H * 0.1);
-      if (shape === 'pines') {
-        ctx.fillStyle = 'rgba(225,240,252,0.7)';
-        ctx.fillRect(0, H * 0.9, W, 1.5);
-      }
       seamless(ctx, W, H);
     },
     3,
@@ -878,8 +997,8 @@ function near(world: World): Texture {
 }
 
 // --- Terén (PixiJS vektory) ---
-const SNOW = 0xe2effa;
-const ICE = 0xcfeeff;
+/** Sliz na šmykľavých kameňoch. */
+const SLIME = 0x7a9a48;
 
 function terrain(level: Level): Container {
   const g = new Graphics();
@@ -904,7 +1023,7 @@ function terrain(level: Level): Container {
     }
   }
 
-  // Svetlé vrstvy (sneh, ľad) sa kreslia až nakoniec, nad čiernu zem.
+  // Svetlé vrstvy (sliz) sa kreslia až nakoniec, nad čiernu zem.
   const light = new Graphics();
   for (let row = 0; row < level.height; row++) {
     for (let col = 0; col < level.width; col++) {
@@ -919,145 +1038,134 @@ function terrain(level: Level): Container {
           !solid(col, row + 1) &&
           tileAt(level, col, row + 1) !== Tile.Water
         )
-          underside(g, light, style, col, row);
-        if (style.top !== 'stone')
-          for (const side of [-1, 1]) {
-            if (solid(col + side, row) || pixelNoise(col, row + side, 313) > 0.4) continue;
-            // Výčnelok na boku.
-            const sx = side < 0 ? x0 : x0 + TILE;
-            g.ellipse(
-              sx,
-              y0 + 4 + pixelNoise(col, row, 314) * 8,
-              1.2,
-              2 + pixelNoise(row, col, 315) * 2,
-            ).fill(INK);
-          }
+          underside(g, style, col, row);
       } else if (tile === Tile.Bounce) {
-        // Zem pod hubou (klobúk je sprite nad povrchom).
+        // Zem pod plachtou (plachta je sprite nad povrchom).
         g.rect(x0 - 0.3, y0 + 4, TILE + 0.6, TILE - 3.7).fill(INK);
       } else if (tile === Tile.Ledge) {
-        g.roundRect(x0 - 0.2, y0, TILE + 0.4, 3, 0.8).fill(INK);
-        if (tileAt(level, col - 1, row) !== Tile.Ledge) g.rect(x0 + 1, y0 + 2, 1, 4).fill(INK);
+        // Trám so šikmými podperami na koncoch.
+        g.rect(x0 - 0.2, y0, TILE + 0.4, 3).fill(INK);
+        if (tileAt(level, col - 1, row) !== Tile.Ledge)
+          g.poly([x0 + 1, y0 + 2, x0 + 2.4, y0 + 2, x0 + 7, y0 + 7, x0 + 5.6, y0 + 7]).fill(INK);
         if (tileAt(level, col + 1, row) !== Tile.Ledge)
-          g.rect(x0 + TILE - 2, y0 + 2, 1, 4).fill(INK);
-        if (style.top === 'snow') light.roundRect(x0, y0 - 1, TILE, 1.6, 0.8).fill(SNOW);
+          g.poly([
+            x0 + TILE - 1,
+            y0 + 2,
+            x0 + TILE - 2.4,
+            y0 + 2,
+            x0 + TILE - 7,
+            y0 + 7,
+            x0 + TILE - 5.6,
+            y0 + 7,
+          ]).fill(INK);
       } else if (tile === Tile.Thorns) {
-        const points: number[] = [x0, y0 + TILE];
-        for (let i = 0; i <= 6; i++) {
-          const x = x0 + (i / 6) * TILE;
-          const peak = 6 + pixelNoise(col * 7 + i, row, 316) * 4;
-          points.push(x - 1.3, y0 + TILE - 3, x, y0 + TILE - peak, x + 1.3, y0 + TILE - 3);
+        // Železné hroty (kované, rovné).
+        g.rect(x0, y0 + TILE - 2.5, TILE, 2.5).fill(INK);
+        for (let i = 0; i < 5; i++) {
+          const x = x0 + 1.6 + i * 3.2;
+          const peak = 8 + pixelNoise(col * 7 + i, row, 316) * 2;
+          g.poly([x - 0.9, y0 + TILE - 2, x, y0 + TILE - peak, x + 0.9, y0 + TILE - 2]).fill(INK);
         }
-        points.push(x0 + TILE, y0 + TILE);
-        g.poly(points).fill(INK);
       } else if (tile === Tile.Water) {
         const top = tileAt(level, col, row - 1) !== Tile.Water;
         g.rect(x0 - 0.2, y0 + (top ? 3 : 0), TILE + 0.4, top ? TILE - 3 : TILE).fill({
           color: style.water,
-          alpha: 0.95,
+          alpha: 0.96,
         });
       }
     }
   }
 
-  // Svietiace hríbiky (farbu majú, lebo svietia).
+  // Dohárajúce sviečky (farbu majú, lebo svietia).
   for (const d of decorOf(level)) {
-    if (d.kind !== 'mushroom' || style.top === 'snow' || style.top === 'stone') continue;
-    g.rect(d.x - 0.3, d.y - 2.4, 0.8, 2.4).fill(INK);
-    g.ellipse(d.x + 0.1, d.y - 2.6, 1.8, 1).fill(level.world === 'abyss' ? 0xff7a5a : 0x6cf0e0);
+    if (d.kind !== 'candle') continue;
+    g.rect(d.x - 0.6, d.y - 2.6, 1.2, 2.6).fill(0x2a2420);
+    g.ellipse(d.x, d.y - 3.4, 0.5, 0.9).fill(0xffd890);
   }
   const c = new Container();
   c.addChild(g, light);
   return c;
 }
 
-/** Vrch zeme podľa sveta: tráva, mach, trstina, sneh, kameň alebo ostne; ľad sa leskne. */
+/** Vrch zeme podľa sveta: dlažba, kosti, uschnutá tráva alebo dlaždice; sliz sa leskne. */
 function surface(
   g: Graphics,
   light: Graphics,
   style: WorldStyle,
-  ice: boolean,
+  slick: boolean,
   col: number,
   row: number,
 ): void {
   const x0 = col * TILE;
   const y0 = row * TILE;
-  if (ice) {
-    light.rect(x0 - 0.3, y0 - 0.2, TILE + 0.6, 1.8).fill({ color: ICE, alpha: 0.95 });
-    light.rect(x0 + 3, y0 + 2.4, 5, 0.5).fill({ color: ICE, alpha: 0.5 });
+  if (slick) {
+    light.rect(x0 - 0.3, y0 - 0.2, TILE + 0.6, 1.4).fill({ color: SLIME, alpha: 0.75 });
+    light
+      .ellipse(x0 + 5 + pixelNoise(col, row, 330) * 6, y0 + 1.2, 2, 0.8)
+      .fill({ color: SLIME, alpha: 0.5 });
     return;
   }
   if (style.top === 'stone') {
-    // Kamenné dlaždice: rovný vrch s občasnou zubatou rímsou.
     if (pixelNoise(col, row, 321) < 0.25) g.rect(x0 + 2, y0 - 2, 5, 2).fill(INK);
     return;
   }
-  for (let i = 0; i < 3; i++) {
-    const bx = x0 + 2 + pixelNoise(col * 3 + i, row, 301) * 12;
-    g.ellipse(
-      bx,
-      y0,
-      2 + pixelNoise(col, row * 3 + i, 302) * 3,
-      0.8 + pixelNoise(col, i, 303) * 1.2,
-    ).fill(INK);
-  }
-  if (style.top === 'snow') {
-    light.roundRect(x0 - 0.4, y0 - 1.6, TILE + 0.8, 3, 1.4).fill(SNOW);
-    if (pixelNoise(col, row, 322) < 0.5)
-      light.ellipse(x0 + 4 + pixelNoise(col, row, 323) * 8, y0 - 1.4, 3, 1.4).fill(SNOW);
+  if (style.top === 'cobbles') {
+    for (let i = 0; i < 4; i++)
+      g.ellipse(x0 + 2 + i * 4 + pixelNoise(col, i, 331) * 1.5, y0, 1.8, 0.9).fill(INK);
     return;
   }
-  if (style.top === 'spikes') {
-    for (let i = 0; i < 3; i++) {
-      const bx = x0 + 2 + pixelNoise(col * 5 + i, row, 324) * 12;
-      const h = 2 + pixelNoise(col, row * 5 + i, 325) * 4;
-      g.poly([bx - 1.2, y0 + 0.5, bx + 1.2, y0 + 0.5, bx + 0.3, y0 - h]).fill(INK);
+  if (style.top === 'bones') {
+    if (pixelNoise(col, row, 332) < 0.45) {
+      const bx = x0 + 3 + pixelNoise(col, row, 333) * 9;
+      g.rect(bx - 2.5, y0 - 1, 5, 0.9).fill(INK);
+      g.circle(bx - 2.6, y0 - 0.9, 0.8).fill(INK);
+      g.circle(bx + 2.6, y0 - 0.9, 0.8).fill(INK);
+    }
+    if (pixelNoise(col, row, 334) < 0.15) {
+      // Lebka.
+      const sx = x0 + 4 + pixelNoise(col, row, 335) * 8;
+      g.circle(sx, y0 - 2, 2).fill(INK);
+      g.rect(sx - 1.2, y0 - 1, 2.4, 1.2).fill(INK);
     }
     return;
   }
-  const reeds = style.top === 'reeds';
-  const blades = style.top === 'moss' ? 2 : reeds ? 5 : 6;
-  for (let i = 0; i < blades; i++) {
+  // Uschnutá tráva a sem-tam drevený krížik.
+  for (let i = 0; i < 5; i++) {
     const bx = x0 + pixelNoise(col * 7 + i, row, 304) * TILE;
     const n = pixelNoise(col, row * 7 + i, 305);
-    const h = style.top === 'moss' ? 1 + n * 1.5 : reeds ? 3 + n * 6 : 1.5 + n * 3.5;
-    const lean = (pixelNoise(col + i, row, 306) - 0.5) * 2;
-    g.poly([bx - 0.6, y0 + 0.5, bx + 0.6, y0 + 0.5, bx + lean, y0 - h]).fill(INK);
-    if (reeds && n > 0.6) g.ellipse(bx + lean * 0.8, y0 - h + 1.5, 0.9, 2).fill(INK);
+    const h = 1.2 + n * 3;
+    const lean = (pixelNoise(col + i, row, 306) - 0.5) * 3;
+    g.poly([bx - 0.5, y0 + 0.5, bx + 0.5, y0 + 0.5, bx + lean, y0 - h]).fill(INK);
+  }
+  if (pixelNoise(col, row, 336) < 0.08) {
+    const cx = x0 + 8;
+    g.rect(cx - 0.5, y0 - 7, 1, 7).fill(INK);
+    g.rect(cx - 2.2, y0 - 5.6, 4.4, 1).fill(INK);
   }
 }
 
-/** Spodok zeme nad prázdnom: korienky, krápniky, cencúliky alebo reťaze. */
-function underside(
-  g: Graphics,
-  light: Graphics,
-  style: WorldStyle,
-  col: number,
-  row: number,
-): void {
+/** Spodok zeme nad prázdnom: korienky, krápniky alebo reťaze s hákmi. */
+function underside(g: Graphics, style: WorldStyle, col: number, row: number): void {
   const x0 = col * TILE;
   const y = row * TILE + TILE;
-  if (style.under === 'stalactites' || style.under === 'icicles') {
-    if (pixelNoise(col, row, 307) >= 0.6) return;
+  if (style.under === 'stalactites') {
+    if (pixelNoise(col, row, 307) >= 0.5) return;
     const cx = x0 + 3 + pixelNoise(col, row, 308) * 10;
-    const len = 4 + pixelNoise(col, row, 309) * 10;
-    const w = 1.5 + pixelNoise(col, row, 310) * 1.5;
-    // V ľadovom svete len drobná námraza, aby sa nepliesla s padajúcimi cencúľmi.
-    if (style.under === 'icicles')
-      light
-        .poly([cx - w * 0.5, y, cx + w * 0.5, y, cx, y + 1.5 + len * 0.15])
-        .fill({ color: ICE, alpha: 0.45 });
-    else g.poly([cx - w, y, cx + w, y, cx, y + len]).fill(INK);
+    const len = 3 + pixelNoise(col, row, 309) * 7;
+    const w = 1.2 + pixelNoise(col, row, 310) * 1.4;
+    g.poly([cx - w, y, cx + w, y, cx, y + len]).fill(INK);
     return;
   }
   if (style.under === 'chains') {
-    if (pixelNoise(col, row, 326) >= 0.25) return;
+    if (pixelNoise(col, row, 326) >= 0.22) return;
     const cx = x0 + 4 + pixelNoise(col, row, 327) * 8;
     const len = 6 + pixelNoise(col, row, 328) * 14;
     g.moveTo(cx, y)
       .lineTo(cx, y + len)
       .stroke({ width: 0.8, color: INK });
-    g.circle(cx, y + len + 1, 1.3).stroke({ width: 0.6, color: INK });
+    g.moveTo(cx, y + len)
+      .quadraticCurveTo(cx + 2, y + len + 2.5, cx - 0.5, y + len + 3)
+      .stroke({ width: 0.7, color: INK });
     return;
   }
   for (let i = 0; i < 2; i++) {
@@ -1091,6 +1199,8 @@ export const vectorArt: Art = {
   player,
   shade,
   eyes,
+  ghoul,
+  ghoulEyes,
   firefly,
   crystal,
   lantern,

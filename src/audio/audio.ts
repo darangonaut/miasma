@@ -10,7 +10,8 @@ export class Sound {
   private echo: DelayNode | null = null;
   private muted = false;
   private music: Music | null = null;
-  private world: World = 'forest';
+  private world: World = 'quarter';
+  private rainGain: GainNode | null = null;
   private chime = 0;
   private chimeTime = 0;
   private padNodes: AudioNode[] = [];
@@ -86,9 +87,27 @@ export class Sound {
     noise.connect(wind).connect(windGain).connect(this.master!);
     this.windFilter = wind;
     this.windGain = windGain;
+    // Dážď: vysoký šum, zapína sa podľa sveta.
+    const rain = ctx.createBufferSource();
+    rain.buffer = this.noiseBuffer(3);
+    rain.loop = true;
+    const rainFilter = ctx.createBiquadFilter();
+    rainFilter.type = 'highpass';
+    rainFilter.frequency.value = 2500;
+    this.rainGain = ctx.createGain();
+    this.rainGain.gain.value = 0;
+    rain.connect(rainFilter).connect(this.rainGain).connect(this.master!);
     noise.start();
     lfo.start();
-    this.padNodes.push(noise, lfo);
+    rain.start();
+    this.padNodes.push(noise, lfo, rain);
+    this.applyRain();
+  }
+
+  private applyRain(): void {
+    if (!this.ctx || !this.rainGain) return;
+    const on = this.world === 'quarter' || this.world === 'pits';
+    this.rainGain.gain.setTargetAtTime(on ? 0.03 : 0, this.ctx.currentTime, 0.5);
   }
 
   private windFilter: BiquadFilterNode | null = null;
@@ -106,6 +125,7 @@ export class Sound {
   setWorld(world: World): void {
     this.world = world;
     this.music?.setWorld(world);
+    this.applyRain();
   }
 
   /** Volať každý snímok: hudba a napätie (0 = pokoj, 1 = nebezpečenstvo). */
@@ -126,10 +146,11 @@ export class Sound {
     for (const e of events) {
       switch (e.type) {
         case 'jump':
-          this.sweep(320, 620, 'square', 0.05, 0.1);
+          // Šuchot plášťa.
+          this.noise(0.14, 1400, 0.05, 'bandpass');
           break;
         case 'land':
-          this.noise(0.06, 400, 0.08);
+          this.noise(0.08, 260, 0.1);
           break;
         case 'firefly': {
           // Stúpajúce zvonenie pri zbieraní za sebou.
@@ -155,8 +176,21 @@ export class Sound {
           this.noise(0.45, 900, 0.18, 'bandpass');
           this.sweep(90, 180, 'sawtooth', 0.06, 0.4);
           break;
+        case 'windup':
+          // Syčanie prízraku pred výpadom.
+          this.noise(0.45, 1800, 0.07, 'bandpass');
+          this.sweep(120, 240, 'sawtooth', 0.03, 0.45);
+          break;
         case 'lunge':
-          this.noise(0.35, 2500, 0.06, 'highpass');
+          this.noise(0.35, 2500, 0.07, 'highpass');
+          break;
+        case 'ghoulNotice':
+          // Chrčanie nakazeného, keď zbadá fakľu.
+          this.groan();
+          break;
+        case 'ghoulDie':
+          this.noise(0.35, 500, 0.14);
+          this.sweep(160, 50, 'sawtooth', 0.08, 0.5);
           break;
         case 'hurt':
           this.sweep(300, 90, 'sawtooth', 0.12, 0.3);
@@ -199,8 +233,9 @@ export class Sound {
           this.noise(0.25, 2000, 0.06, 'highpass');
           break;
         case 'died':
-          if (e.cause === 'water') this.noise(0.6, 900, 0.15, 'bandpass');
-          this.sweep(440, 60, 'triangle', 0.14, 1);
+          if (e.cause === 'water') this.noise(0.6, 600, 0.15, 'bandpass');
+          else this.noise(0.25, 400, 0.14);
+          this.sweep(220, 40, 'sawtooth', 0.08, 1.2);
           break;
         case 'gust':
           this.noise(1.2, 700, 0.08, 'bandpass');
@@ -220,6 +255,33 @@ export class Sound {
           break;
       }
     }
+  }
+
+  /** Hlboké chrčanie: píla s kolísajúcou výškou cez tlmiaci filter. */
+  private groan(): void {
+    const ctx = this.ctx!;
+    const t = ctx.currentTime;
+    const o = ctx.createOscillator();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(95, t);
+    o.frequency.linearRampToValueAtTime(70, t + 0.7);
+    const wobble = ctx.createOscillator();
+    wobble.frequency.value = 9;
+    const depth = ctx.createGain();
+    depth.gain.value = 8;
+    wobble.connect(depth).connect(o.frequency);
+    const f = ctx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.value = 420;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.12, t + 0.12);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.8);
+    o.connect(f).connect(g).connect(this.master!);
+    o.start(t);
+    wobble.start(t);
+    o.stop(t + 0.85);
+    wobble.stop(t + 0.85);
   }
 
   private tone(
