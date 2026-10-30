@@ -270,6 +270,14 @@ button.big:hover {
   transition: opacity 0.25s;
 }
 
+#sick {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle, transparent 30%, rgb(90 120 30 / 60%));
+  opacity: 0;
+}
+
 #dread {
   position: fixed;
   inset: 0;
@@ -533,4 +541,44 @@ button.big:hover {
   #start .logo {
     font-size: clamp(44px, 8.5vw, 130px);
   }
+}
+
+/* --- Nákaza miazmou --- */
+.infection {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.infection-icon {
+  width: 16px;
+  font-size: 15px;
+  color: #b8d870;
+  text-align: center;
+}
+
+.infection-bar {
+  width: 160px;
+  height: 6px;
+  overflow: hidden;
+  background: rgb(0 0 0 / 45%);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+.infection-fill {
+  width: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #6a8a30, #c8e070);
+  border-radius: 999px;
+  box-shadow: 0 0 8px rgb(170 210 80 / 60%);
+}
+
+#touch .shield {
+  color: #c8b8a8;
+}
+
+.infection[hidden] {
+  display: none;
 }

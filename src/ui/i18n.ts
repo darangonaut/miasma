@@ -7,8 +7,8 @@ const en = {
   newGame: 'New game',
   newGameConfirm: 'Sure? Progress will be lost',
   controlsDesktop:
-    '← → / A D move · Space / ↑ jump · C / F throw a spark · Shift / X flare the torch · Esc pause',
-  controlsTouch: 'Arrows move · ⤒ jump · ✸ spark · ✦ flare the torch',
+    '← → / A D move · Space / ↑ jump · C / F spark · Shift / X flare the torch · ↓ / S hide the torch · Esc pause',
+  controlsTouch: 'Arrows move · ⤒ jump · ✸ spark · ✦ flare · ◐ hide the torch',
   world1: 'Quarantine Quarter',
   level1: 'Quarantine',
   level2: 'Rooftops',
@@ -59,6 +59,17 @@ const en = {
     'Behind a gravestone or a rock you are sheltered. When the wind starts to howl, a gust is coming.',
   hintBigWraith: 'A great wraith takes three hits.',
   hintMover: 'Hanging platforms swing back and forth. Time your jump.',
+  hintBarricade:
+    'Plague barricades are too high to climb. Set them on fire with a spark (C) or a flared torch — the fire spreads.',
+  hintBarricadeTouch:
+    'Plague barricades are too high to climb. Set them on fire with a spark ✸ or a flared torch ✦ — the fire spreads.',
+  hintShield:
+    'Hold ↓ to hide the torch under your cloak. The infected stop seeing you and wraiths lose your trail — but you move slowly and the darkness creeps in.',
+  hintShieldTouch:
+    'Hold ◐ to hide the torch under your cloak. The infected stop seeing you and wraiths lose your trail — but you move slowly and the darkness creeps in.',
+  hintMiasma:
+    'Green miasma infects you. Get through quickly or burn it away with a flared torch. Healing herbs cure the infection.',
+  diedMiasma: 'The miasma choked you…',
   oilLow: 'The torch is dying!',
   diedThorns: 'Impaled…',
   diedFall: 'Fell into the dark…',
@@ -95,8 +106,8 @@ const sk: Record<Key, string> = {
   newGame: 'Nová hra',
   newGameConfirm: 'Naozaj? Postup sa zmaže',
   controlsDesktop:
-    '← → / A D chôdza · Medzerník / ↑ skok · C / F hod iskry · Shift / X rozžiariť fakľu · Esc pauza',
-  controlsTouch: 'Šípky chôdza · ⤒ skok · ✸ iskra · ✦ rozžiariť fakľu',
+    '← → / A D chôdza · Medzerník / ↑ skok · C / F iskra · Shift / X rozžiariť fakľu · ↓ / S ukryť fakľu · Esc pauza',
+  controlsTouch: 'Šípky chôdza · ⤒ skok · ✸ iskra · ✦ rozžiariť · ◐ ukryť fakľu',
   world1: 'Karanténna štvrť',
   level1: 'Karanténa',
   level2: 'Strechy',
@@ -145,6 +156,17 @@ const sk: Record<Key, string> = {
   hintShelter: 'Za náhrobkom alebo skalou si v závetrí. Keď vietor začne kvíliť, prichádza náraz.',
   hintBigWraith: 'Veľký prízrak vydrží tri zásahy.',
   hintMover: 'Visiace plošiny sa hojdajú sem a tam. Načasuj skok.',
+  hintBarricade:
+    'Morové barikády sú príliš vysoké. Podpáľ ich iskrou (C) alebo rozžiarenou fakľou — oheň sa rozšíri.',
+  hintBarricadeTouch:
+    'Morové barikády sú príliš vysoké. Podpáľ ich iskrou ✸ alebo rozžiarenou fakľou ✦ — oheň sa rozšíri.',
+  hintShield:
+    'Podrž ↓ a ukry fakľu pod plášť. Nakazení ťa prestanú vidieť a prízraky stratia stopu — no ideš pomaly a tma sa ti zakráda.',
+  hintShieldTouch:
+    'Podrž ◐ a ukry fakľu pod plášť. Nakazení ťa prestanú vidieť a prízraky stratia stopu — no ideš pomaly a tma sa ti zakráda.',
+  hintMiasma:
+    'Zelená miazma ťa nakazí. Prejdi rýchlo alebo ju spáľ rozžiarenou fakľou. Liečivé byliny nákazu vyliečia.',
+  diedMiasma: 'Udusila ťa miazma…',
   oilLow: 'Fakľa dohára!',
   diedThorns: 'Nabodnutý…',
   diedFall: 'Pád do tmy…',
@@ -179,8 +201,8 @@ const cs: Record<Key, string> = {
   newGame: 'Nová hra',
   newGameConfirm: 'Opravdu? Postup se smaže',
   controlsDesktop:
-    '← → / A D chůze · Mezerník / ↑ skok · C / F hod jiskry · Shift / X rozzářit pochodeň · Esc pauza',
-  controlsTouch: 'Šipky chůze · ⤒ skok · ✸ jiskra · ✦ rozzářit pochodeň',
+    '← → / A D chůze · Mezerník / ↑ skok · C / F jiskra · Shift / X rozzářit pochodeň · ↓ / S ukrýt pochodeň · Esc pauza',
+  controlsTouch: 'Šipky chůze · ⤒ skok · ✸ jiskra · ✦ rozzářit · ◐ ukrýt pochodeň',
   world1: 'Karanténní čtvrť',
   level1: 'Karanténa',
   level2: 'Střechy',
@@ -229,6 +251,17 @@ const cs: Record<Key, string> = {
   hintShelter: 'Za náhrobkem nebo skálou jsi v závětří. Když vítr začne kvílet, přichází náraz.',
   hintBigWraith: 'Velký přízrak vydrží tři zásahy.',
   hintMover: 'Visící plošiny se houpou sem a tam. Načasuj skok.',
+  hintBarricade:
+    'Morové barikády jsou příliš vysoké. Zapal je jiskrou (C) nebo rozzářenou pochodní — oheň se rozšíří.',
+  hintBarricadeTouch:
+    'Morové barikády jsou příliš vysoké. Zapal je jiskrou ✸ nebo rozzářenou pochodní ✦ — oheň se rozšíří.',
+  hintShield:
+    'Podrž ↓ a ukryj pochodeň pod plášť. Nakažení tě přestanou vidět a přízraky ztratí stopu — ale jdeš pomalu a tma se ti plíží.',
+  hintShieldTouch:
+    'Podrž ◐ a ukryj pochodeň pod plášť. Nakažení tě přestanou vidět a přízraky ztratí stopu — ale jdeš pomalu a tma se ti plíží.',
+  hintMiasma:
+    'Zelená miazma tě nakazí. Projdi rychle nebo ji spal rozzářenou pochodní. Léčivé byliny nákazu vyléčí.',
+  diedMiasma: 'Udusila tě miazma…',
   oilLow: 'Pochodeň dohořívá!',
   diedThorns: 'Nabodnutý…',
   diedFall: 'Pád do tmy…',

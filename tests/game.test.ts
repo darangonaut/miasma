@@ -76,7 +76,7 @@ describe('levely', () => {
   });
 
   it('neznámy znak je chyba', () => {
-    expect(() => make([' P x E', '######'])).toThrow();
+    expect(() => make([' P Q E', '######'])).toThrow();
   });
 });
 
@@ -441,6 +441,58 @@ describe('nové svety', () => {
     const flare = make([' P   g          E', '#################']);
     expect(run(flare, 1.5, { flare: true }).some((e) => e.type === 'ghoulDie')).toBe(true);
     expect(flare.state).toBe('play');
+  });
+
+  it('miazma nakazí a zabije, byliny vyliečia, rozžiarená fakľa ju spáli', () => {
+    const rows = [
+      '  ~~~~~~~~~~~~~   ',
+      '  ~~~~~~~~~~~~~   ',
+      ' P~~~~~~~~~~~~~  E',
+      '#################',
+    ];
+    const game = make(rows);
+    const events = [...run(game, 0.5, { right: true }), ...run(game, 4)];
+    expect(events.some((e) => e.type === 'died' && e.cause === 'miasma')).toBe(true);
+
+    const herb = make([' P  h        E', '#############']);
+    herb.infection = 0.8;
+    run(herb, 1.5, { right: true });
+    expect(herb.infection).toBe(0);
+
+    const burn = make(rows);
+    run(burn, 1.5, { flare: true });
+    expect(burn.state).toBe('play');
+    const col = Math.floor(burn.center.x / TILE);
+    expect(burn.fog[2 * burn.level.width + col]).toBeLessThan(0.3);
+  });
+
+  it('barikáda drží, kým ju iskra nepodpáli; oheň sa rozšíri a zhorí', () => {
+    const game = make(['     x      ', '     x      ', ' P   x     E', '############']);
+    run(game, 2, { right: true });
+    expect(game.player.x).toBeLessThan(5 * TILE);
+    expect(game.barricades.every((b) => b.state === 'solid')).toBe(true);
+    const events = [...game.step(DT, { ...NO_INPUT, spark: true }), ...run(game, 3)];
+    expect(events.some((e) => e.type === 'ignite')).toBe(true);
+    expect(game.barricades.every((b) => b.state === 'gone')).toBe(true);
+    run(game, 2, { right: true });
+    expect(game.player.x).toBeGreaterThan(6 * TILE);
+  });
+
+  it('fakľa pod plášťom: menej svetla, pomalšia chôdza, nakazení nevidia, tma pohlcuje', () => {
+    const open = make([' P                  E', '#####################']);
+    run(open, 1, { right: true });
+    const fast = open.player.x;
+    const hidden = make([' P                  E', '#####################']);
+    run(hidden, 1, { right: true, down: true });
+    expect(hidden.player.x).toBeLessThan(fast - 20);
+    expect(hidden.radius).toBeLessThan(30);
+    expect(hidden.dread).toBeGreaterThan(0);
+    const dark = run(hidden, 8, { down: true });
+    expect(dark.some((e) => e.type === 'died' && e.cause === 'dark')).toBe(true);
+
+    const sneak = make(['                     ', ' P      g           E', '#####################']);
+    const ev = run(sneak, 1, { down: true });
+    expect(ev.some((e) => e.type === 'ghoulNotice')).toBe(false);
   });
 
   it('mimo cintorína nefúka', () => {

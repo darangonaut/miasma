@@ -188,6 +188,25 @@ export class Sound {
           // Chrčanie nakazeného, keď zbadá fakľu.
           this.groan();
           break;
+        case 'ignite':
+          this.noise(0.6, 1500, 0.1, 'bandpass');
+          this.noise(0.3, 400, 0.08);
+          break;
+        case 'burnt':
+          this.noise(0.35, 300, 0.1);
+          break;
+        case 'herb':
+          [0, 4, 7].forEach((n, i) =>
+            this.tone(this.note(n) * 2, 'sine', 0.07, 0.7, this.echo ?? this.master!, i * 0.06),
+          );
+          break;
+        case 'shield':
+          // Fakľa pod plášťom: tlmený šuchot; vytiahnutie zasyčí.
+          this.noise(0.2, e.on ? 500 : 1800, 0.06, e.on ? 'lowpass' : 'bandpass');
+          break;
+        case 'fogBurn':
+          this.noise(0.25, 2400, 0.04, 'highpass');
+          break;
         case 'ghoulDie':
           this.noise(0.35, 500, 0.14);
           this.sweep(160, 50, 'sawtooth', 0.08, 0.5);
@@ -233,6 +252,8 @@ export class Sound {
           this.noise(0.25, 2000, 0.06, 'highpass');
           break;
         case 'died':
+          if (e.cause === 'miasma')
+            [0, 0.25, 0.45].forEach((d) => this.noiseAt(d, 0.18, 700, 0.12));
           if (e.cause === 'water') this.noise(0.6, 600, 0.15, 'bandpass');
           else this.noise(0.25, 400, 0.14);
           this.sweep(220, 40, 'sawtooth', 0.08, 1.2);
@@ -341,6 +362,23 @@ export class Sound {
     f.type = type;
     f.frequency.value = freq;
     const g = ctx.createGain();
+    g.gain.setValueAtTime(volume, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + length);
+    src.connect(f).connect(g).connect(this.master!);
+    src.start(t);
+  }
+
+  /** Krátky šum s oneskorením (kašeľ pri nákaze). */
+  private noiseAt(delay: number, length: number, freq: number, volume: number): void {
+    const ctx = this.ctx!;
+    const t = ctx.currentTime + delay;
+    const src = ctx.createBufferSource();
+    src.buffer = this.noiseBuffer(length);
+    const f = ctx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.frequency.value = freq;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, ctx.currentTime);
     g.gain.setValueAtTime(volume, t);
     g.gain.exponentialRampToValueAtTime(0.0001, t + length);
     src.connect(f).connect(g).connect(this.master!);

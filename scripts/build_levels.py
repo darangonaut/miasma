@@ -330,10 +330,21 @@ levels.append(('cathedral', 'cathedral-4', 'level16', [], q))
 # obťažnosť stúpa so svetom a levelom. Náhoda je pevne zasiata podľa id levelu.
 
 WORLD_BLOCKS = {
-    'quarter': ['pit', 'spikes', 'step', 'planks', 'ghouls', 'bounce', 'ledges', 'wraiths'],
-    'catacombs': ['water', 'spikes', 'planks', 'ghouls', 'debris', 'slick', 'flies', 'ledges', 'wraiths'],
-    'pits': ['pit', 'water', 'spikes', 'planks', 'ghouls', 'bounce', 'step', 'wraiths', 'great'],
-    'cathedral': ['movers', 'lift', 'debris', 'ghouls', 'planks', 'ledges', 'spikes', 'great', 'pit'],
+    'quarter': ['pit', 'spikes', 'step', 'planks', 'ghouls', 'bounce', 'ledges', 'wraiths',
+                'barricade', 'sneak'],
+    'catacombs': ['water', 'spikes', 'planks', 'ghouls', 'debris', 'slick', 'flies', 'ledges',
+                  'wraiths', 'barricade', 'fog', 'fog'],
+    'pits': ['pit', 'water', 'spikes', 'planks', 'ghouls', 'bounce', 'step', 'wraiths', 'great',
+             'fog', 'barricade'],
+    'cathedral': ['movers', 'lift', 'debris', 'ghouls', 'planks', 'ledges', 'spikes', 'great',
+                  'pit', 'barricade', 'fog', 'sneak'],
+}
+
+# Nové prvky Miasmy sa predstavia s tabuľou na začiatku druhej polovice levelu.
+INTRO = {
+    'quarter-1': ('barricade', 'hintBarricade'),
+    'quarter-2': ('sneak', 'hintShield'),
+    'catacombs-1': ('fog', 'hintMiasma'),
 }
 
 
@@ -478,6 +489,42 @@ class Gen:
             x0 = s.x
             s.flat(10)
             s.put(x0 + 5, s.y - 5, 'S')
+        elif kind == 'barricade':
+            # Zabednená ulička: vyššia, než sa dá preskočiť; treba ju podpáliť.
+            s.flat(4)
+            w = 1 if d < 6 else 2
+            top = max(0, s.y - 8)
+            s.lv.ground(s.x, s.x + w - 1, top=s.y)
+            for x in range(s.x, s.x + w):
+                for row in range(top, s.y):
+                    s.lv.g[row][x] = 'x'
+            s.x += w
+            x0 = s.x
+            s.flat(6)
+            if d >= 4 and r.random() < 0.5:
+                s.put(x0 + 4, s.y - 1, 'g')
+        elif kind == 'fog':
+            # Oblak miazmy nad zemou; v ťažších leveloch za ním byliny.
+            n = 6 + d // 3
+            x0 = s.x
+            s.flat(n, rock=False)
+            for x in range(x0, x0 + n):
+                for row in range(max(0, s.y - 3), s.y):
+                    if s.lv.g[row][x] in ' f':
+                        s.lv.g[row][x] = '~' if s.lv.g[row][x] == ' ' else 'f'
+            s.flat(3, ember=False, rock=False)
+            if n >= 8:
+                s.put(s.x - 2, s.y - 1, 'h')
+        elif kind == 'sneak':
+            # Chodba s nízkym stropom a tromi nakazenými: s ukrytou fakľou idú pomaly.
+            if s.y - 5 < 1:
+                return s.block('ghouls')
+            n = 18
+            x0 = s.x
+            s.flat(n, rock=False)
+            s.lv.ground(x0 + 2, x0 + n - 3, top=max(0, s.y - 6), bottom=s.y - 5)
+            for dx in (6, 11, 15):
+                s.put(x0 + dx, s.y - 1, 'g')
         elif kind == 'movers':
             if s.y > 12:
                 return s.block('pit')
@@ -516,7 +563,7 @@ def sprinkle(lv, x0, x1, every):
                 break
 
 
-def extend(lv, world, id_, diff, extra):
+def extend(lv, world, id_, diff, extra, hints):
     """Predĺži level o `extra` stĺpcov: pôvodná vatra zmizne, nová je na konci."""
     ex = None
     for row in range(H):
@@ -535,6 +582,12 @@ def extend(lv, world, id_, diff, extra):
     rng = random.Random(sum(ord(c) * (i + 1) for i, c in enumerate(id_)))
     g = Gen(lv, old, y, rng, world, diff)
     g.flat(4)
+    if id_ in INTRO:
+        kind, hint = INTRO[id_]
+        hints.append(hint)
+        g.put(g.x - 2, g.y - 1, str(len(hints)))
+        g.block(kind)
+        g.flat(3)
     pool = WORLD_BLOCKS[world]
     # Na cintoríne sa čaká na vietor, preto dve kaplnky; inde jedna v polovici.
     shrines = [old + extra // 3, old + 2 * extra // 3] if world == 'pits' else [old + extra // 2]
@@ -559,7 +612,10 @@ def extend(lv, world, id_, diff, extra):
 
 
 for i, (world, id_, name, hints, lv) in enumerate(levels):
-    extend(lv, world, id_, i, lv.w)
+    if hints is None:
+        hints = []
+    levels[i] = (world, id_, name, hints, lv)
+    extend(lv, world, id_, i, lv.w, hints)
 
 
 out = [

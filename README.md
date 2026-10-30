@@ -13,6 +13,12 @@ Miasma is the grim older sibling of [Lumen](https://github.com/darangonaut/lumen
 - **The torch burns fast.** Pitch runs out quickly, embers are rare and shrines are far apart. In total darkness you last only seconds.
 - **Enemies hunt.** The infected see your fire and come for you. You can outrun them, jump on their heads, throw a spark or flare the torch and burn them.
 
+Three mechanics are new to Miasma:
+
+- **Miasma.** Green plague clouds infect you, and full infection kills. Get through fast or burn the cloud away with a flared torch, because fire purifies. Healing herbs cure the infection.
+- **Burning barricades.** Plague barricades are too high to jump. Set them on fire with a spark or the torch, and the fire spreads to the planks next to them. It costs pitch.
+- **Hiding the torch.** Hold ↓ to hide the torch under your cloak. The infected stop seeing you and wraiths lose your trail, but you move slowly and the darkness starts to swallow you.
+
 ## Four worlds
 
 |     | World                  | What awaits you                                                 |

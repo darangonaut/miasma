@@ -90,6 +90,22 @@ export function botRun(
       continue;
     }
 
+    // Barikáda pred ním: podpáli ju iskrou a počká, kým zhorí.
+    const barricade = [4, 20, 36].some((d) =>
+      [row, row - 1].some((r) => {
+        const c = ahead(d);
+        if (tileAt(level, c, r) !== Tile.Barricade) return false;
+        return game.barricades.find((b) => b.col === c && b.row === r)?.state !== 'gone';
+      }),
+    );
+    if (barricade && p.onGround) {
+      const lit = game.barricades.some(
+        (b) => b.state === 'burning' && Math.abs(b.col * TILE - p.x) < 4 * TILE,
+      );
+      step({ spark: !lit && Math.floor(game.time * 4) % 2 === 0 });
+      continue;
+    }
+
     const wall =
       isGround(tileAt(level, front, row)) ||
       tileAt(level, front, row) === Tile.Crumble ||

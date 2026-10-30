@@ -8,6 +8,7 @@ import {
   TilingSprite,
 } from 'pixi.js';
 import {
+  BARRICADE_LIGHT,
   FLARE_RADIUS,
   GHOUL_H,
   LANTERN_RADIUS,
@@ -100,6 +101,9 @@ export class Renderer {
     sparkBall: Texture.EMPTY,
     water: [] as Texture[],
     crumble: Texture.EMPTY,
+    barricade: Texture.EMPTY,
+    herb: Texture.EMPTY,
+    fog: Texture.EMPTY,
     bounce: [Texture.EMPTY, Texture.EMPTY],
     icicle: Texture.EMPTY,
     mover: Texture.EMPTY,
@@ -112,6 +116,10 @@ export class Renderer {
   private mothSprites: Sprite[] = [];
   private sparkSprites: Sprite[] = [];
   private crumbleSprites: { sprite: Sprite; col: number; row: number }[] = [];
+  private barricadeSprites: { sprite: Sprite; fire: Sprite }[] = [];
+  private herbSprites: Sprite[] = [];
+  /** Chumáče miazmy: jeden na políčko, mierne sa vlnia. */
+  private fogSprites: { sprite: Sprite; index: number; seed: number }[] = [];
   private waterSprites: { sprite: Sprite; col: number }[] = [];
   private player = new Sprite();
   private shadeSprites: { body: Sprite; eyes: Sprite }[] = [];
@@ -184,6 +192,9 @@ export class Renderer {
     this.tex.moth = [0, 1].map((f) => art.moth(f));
     this.tex.sparkBall = art.spark();
     this.tex.crumble = art.crumble();
+    this.tex.barricade = art.barricade();
+    this.tex.herb = art.herb();
+    this.tex.fog = art.fogPuff();
     this.tex.moon = art.moon();
     this.tex.bounce = [art.bounce(false), art.bounce(true)];
     this.tex.icicle = art.icicle();
@@ -256,6 +267,17 @@ export class Renderer {
       this.level.addChild(sprite);
       return { sprite, col: c.col, row: c.row };
     });
+    this.barricadeSprites = game.barricades.map((b) => {
+      const sprite = new Sprite(this.tex.barricade);
+      sprite.position.set(b.col * TILE, b.row * TILE);
+      this.level.addChild(sprite);
+      const fire = new Sprite(this.tex.flame[0]);
+      fire.anchor.set(0.5, 1);
+      fire.position.set(b.col * TILE + TILE / 2, b.row * TILE + TILE);
+      fire.visible = false;
+      this.above.addChild(fire);
+      return { sprite, fire };
+    });
     this.bounceSprites = [];
     for (let row = 0; row < level.height; row++) {
       for (let col = 0; col < level.width; col++) {
@@ -319,6 +341,21 @@ export class Renderer {
       s.position.set(f.x, f.y);
       this.above.addChild(s);
       return s;
+    });
+    this.herbSprites = game.herbs.map((hb) => {
+      const s = new Sprite(this.tex.herb);
+      s.anchor.set(0.5);
+      s.position.set(hb.x, hb.y);
+      this.above.addChild(s);
+      return s;
+    });
+    this.fogSprites = level.fog.map((f, i) => {
+      const sprite = new Sprite(this.tex.fog);
+      sprite.anchor.set(0.5);
+      sprite.position.set(f.col * TILE + TILE / 2, f.row * TILE + TILE / 2);
+      sprite.blendMode = 'add';
+      this.above.addChild(sprite);
+      return { sprite, index: f.row * level.width + f.col, seed: (i * 1.37) % 6.28 };
     });
     this.crystalSprites = game.crystals.map((k) => {
       const s = new Sprite(this.tex.crystal);
@@ -479,6 +516,19 @@ export class Renderer {
         case 'shatter':
           this.shake = 1.5;
           this.burst(e.x, e.y, 12, 0xcfeeff, 60, true);
+          break;
+        case 'ignite':
+          this.burst(e.x, e.y, 10, C.flameRed, 50, true);
+          break;
+        case 'burnt':
+          this.burst(e.x, e.y, 10, C.shadeInner, 40, false);
+          this.burst(e.x, e.y, 6, C.flame, 40, true);
+          break;
+        case 'herb':
+          this.burst(e.x, e.y, 14, 0xc8f0a0, 50, true);
+          break;
+        case 'fogBurn':
+          this.burst(e.x, e.y, 4, 0xa8c860, 30, true);
           break;
         case 'ghoulDie':
           this.shake = 2;
@@ -647,11 +697,12 @@ export class Renderer {
     );
     this.player.visible =
       game.state !== 'dead' && !(p.invulnerable > 0 && Math.floor(t * 12) % 2 === 0);
-    // Plameň fakle: pri rozžiarení šľahá, bez smoly zostane len tlejúci uhlík.
+    // Plameň fakle: pri rozžiarení šľahá, pod plášťom a bez smoly zostane len tlejúci uhlík.
     const lamp = game.lamp;
     this.torch.visible = game.state !== 'dead';
     this.torch.texture = this.tex.flame[Math.floor(t * 12) % 3]!;
-    const size = game.oil <= 0 ? 0.12 : 0.22 + (game.radius / FLARE_RADIUS) * 0.3;
+    const size = game.oil <= 0 || game.shielded ? 0.1 : 0.22 + (game.radius / FLARE_RADIUS) * 0.3;
+    this.player.scale.y = game.shielded ? 0.92 : 1;
     this.torch.scale.set(size * (1 + Math.sin(t * 23) * 0.06), size * (1 + Math.sin(t * 17) * 0.1));
     this.torch.position.set(lamp.x, lamp.y + 1.6);
 
@@ -715,6 +766,29 @@ export class Renderer {
         this.particles[this.particles.length - 1]!.sprite.tint = C.flame;
       }
     });
+    game.barricades.forEach((b, i) => {
+      const { sprite, fire } = this.barricadeSprites[i]!;
+      sprite.visible = b.state !== 'gone';
+      fire.visible = b.state === 'burning';
+      if (b.state === 'burning') {
+        fire.texture = this.tex.flame[(Math.floor(t * 12) + i) % 3]!;
+        const k = 0.8 + Math.min(1, b.timer * 3) * 0.5;
+        fire.scale.set(k, k * (1 + Math.sin(t * 20 + i) * 0.1));
+        sprite.tint = 0xff9a60;
+      }
+    });
+    game.herbs.forEach((hb, i) => {
+      const s = this.herbSprites[i]!;
+      s.visible = !hb.taken;
+      s.y = hb.y + Math.sin(t * 2 + i) * 1;
+    });
+    for (const f of this.fogSprites) {
+      const d = game.fog[f.index]!;
+      f.sprite.visible = d > 0.03;
+      f.sprite.alpha = d * (0.5 + Math.sin(t * 0.9 + f.seed) * 0.12);
+      f.sprite.scale.set(1 + Math.sin(t * 0.6 + f.seed) * 0.12);
+      f.sprite.rotation = Math.sin(t * 0.3 + f.seed) * 0.4;
+    }
     // Drobiace sa kamene sa trasú, potom zmiznú.
     game.crumbles.forEach((c, i) => {
       const { sprite } = this.crumbleSprites[i]!;
@@ -976,6 +1050,20 @@ export class Renderer {
     // Oči nakazených trochu presvitajú tmou, aby bolo vidieť, odkiaľ idú.
     for (const g of game.ghouls)
       if (g.alive) glow(g.x + g.dir * 3, g.y - GHOUL_H + 4, 6, C.plague, 0.25);
+    for (const b of game.barricades) {
+      if (b.state !== 'burning') continue;
+      light(b.col * TILE + 8, b.row * TILE + 8, BARRICADE_LIGHT * flicker);
+      glow(b.col * TILE + 8, b.row * TILE + 8, BARRICADE_LIGHT * 0.8, WARM, 0.2);
+    }
+    // Miazma slabo svieti, aby bolo vidieť, kam nevstupovať.
+    for (const f of this.fogSprites)
+      if (f.sprite.visible && f.index % 2 === 0)
+        light(f.sprite.x, f.sprite.y, 14, 0.18 * game.fog[f.index]!);
+    game.herbs.forEach((hb, i) => {
+      if (hb.taken) return;
+      light(hb.x, this.herbSprites[i]!.y, 10, 0.5);
+      glow(hb.x, this.herbSprites[i]!.y, 10, 0xc8f0a0, 0.3);
+    });
     for (const sp of game.sparks) {
       light(sp.x, sp.y, SPARK_RADIUS);
       glow(sp.x, sp.y, 22, C.flame, 0.35);

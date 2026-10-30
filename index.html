@@ -17,12 +17,17 @@
   <body>
     <div id="game"></div>
     <div id="dread"></div>
+    <div id="sick"></div>
     <div id="hurt"></div>
     <div id="hud" hidden>
       <div class="hud-left">
         <div class="oil">
           <span class="oil-icon"></span>
           <div class="oil-bar"><div class="oil-fill"></div></div>
+        </div>
+        <div class="infection" hidden>
+          <span class="infection-icon">☣</span>
+          <div class="infection-bar"><div class="infection-fill"></div></div>
         </div>
         <div class="counts"><span class="fireflies"></span> <span class="crystals"></span></div>
       </div>
@@ -38,6 +43,7 @@
       <div class="pad-left">
         <button data-action="left" aria-label="Left">◀</button>
         <button data-action="right" aria-label="Right">▶</button>
+        <button data-action="down" class="shield" aria-label="Hide the torch">◐</button>
       </div>
       <div class="pad-right">
         <button data-action="flare" class="flare" aria-label="Flare the torch">✦</button>

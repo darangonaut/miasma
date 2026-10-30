@@ -536,6 +536,79 @@ function crumble(): Texture {
   });
 }
 
+/** Horľavá barikáda: zbité dosky s namaľovaným morovým krížom. */
+function barricade(): Texture {
+  return paint(TILE, TILE, (ctx) => {
+    ctx.fillStyle = '#1a120c';
+    ctx.fillRect(0.4, 0, 15.2, 16);
+    ctx.strokeStyle = '#3a2818';
+    for (const x of [4, 8, 12]) line(ctx, x, 0, x, 16, 0.5);
+    ctx.fillStyle = '#24180e';
+    ctx.save();
+    ctx.translate(8, 8);
+    ctx.rotate(0.5);
+    ctx.fillRect(-9, -1.4, 18, 2.8);
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(170,40,30,0.85)';
+    line(ctx, 8, 3.5, 8, 12.5, 1.1);
+    line(ctx, 4, 7, 12, 7, 1.1);
+    ctx.fillStyle = '#5a4a3a';
+    for (const [x, y] of [
+      [2, 2],
+      [14, 2],
+      [2, 14],
+      [14, 14],
+    ] as const)
+      circle(ctx, x, y, 0.5);
+  });
+}
+
+/** Liečivé byliny: zväzok bledozelených lístkov, slabo žiari. */
+function herb(): Texture {
+  return paint(9, 10, (ctx) => {
+    ctx.shadowColor = '#b8e890';
+    ctx.shadowBlur = 8;
+    ctx.strokeStyle = '#6a8a4a';
+    line(ctx, 4.5, 9.6, 4.5, 3, 0.5);
+    ctx.fillStyle = '#c8f0a0';
+    for (const [x, y, a] of [
+      [3, 3, -0.6],
+      [6, 3.4, 0.6],
+      [2.6, 5.6, -0.9],
+      [6.4, 6, 0.9],
+      [4.5, 1.6, 0],
+    ] as const) {
+      ctx.beginPath();
+      ctx.ellipse(x, y, 0.9, 1.9, a, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = '#7a4a2a';
+    ctx.fillRect(3.6, 7.6, 1.8, 0.9);
+  });
+}
+
+/** Chumáč miazmy: mäkký chorobne zelený obláčik. */
+function fogPuff(): Texture {
+  return paint(
+    24,
+    24,
+    (ctx) => {
+      for (const [x, y, r] of [
+        [12, 12, 10],
+        [7, 14, 6],
+        [17, 13, 6],
+      ] as const) {
+        const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+        g.addColorStop(0, 'rgba(170,200,90,0.55)');
+        g.addColorStop(1, 'rgba(120,150,60,0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, 24, 24);
+      }
+    },
+    3,
+  );
+}
+
 /** Mesiac je biely; farbu (krvavú, chorobne zelenú) mu dáva renderer podľa sveta. */
 function moon(): Texture {
   return paint(
@@ -1213,6 +1286,9 @@ export const vectorArt: Art = {
   spark,
   water,
   crumble,
+  barricade,
+  herb,
+  fogPuff,
   moon,
   sky,
   far,

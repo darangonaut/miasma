@@ -24,6 +24,7 @@ const banner = $('#banner');
 const toast = $('#toast');
 const hurt = $('#hurt');
 const dread = $('#dread');
+const sick = $('#sick');
 const touch = $('#touch');
 
 // --- Uložený postup ---
@@ -271,6 +272,7 @@ const DEATHS: Record<string, Key> = {
   icicle: 'diedIcicle',
   shade: 'diedShade',
   ghoul: 'diedGhoul',
+  miasma: 'diedMiasma',
 };
 
 function finishLevel(g: Game): void {
@@ -351,6 +353,10 @@ function updateHud(g: Game): void {
   $('.fireflies').textContent = `✶ ${g.fireflyCount}/${g.fireflies.length}`;
   $('.crystals').textContent = g.crystals.length ? `✝ ${g.crystalCount}/${g.crystals.length}` : '';
   dread.style.opacity = String(Math.min(1, g.dread / DREAD_LIMIT) * 0.9);
+  const infection = $('.infection');
+  infection.hidden = g.infection <= 0.001;
+  $('.infection-fill').style.width = `${Math.min(1, g.infection) * 100}%`;
+  sick.style.opacity = String(Math.min(1, g.infection) * 0.85);
   if (g.sign && g.state === 'play') {
     const text = hintText(g.sign.hint);
     if (hint.textContent !== text) hint.textContent = text;

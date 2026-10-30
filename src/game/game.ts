@@ -51,6 +51,22 @@ export const PLAYER_H = 13;
 // --- Fakľa a smola (v kóde „olej“) ---
 // Miasma je tvrdšia než Lumen: fakľa horí rýchlejšie, uhlíkov je menej a svetlo je menšie.
 export const OIL_MAX = 100;
+// --- Ukrytá fakľa (pod plášťom): málo svetla, šetrí smolu, nevidia ťa, ale tma ťa pohlcuje ---
+export const SHIELD_RADIUS = 22;
+const SHIELD_DRAIN = 0.4;
+const SHIELD_SPEED = 0.5;
+/** Ako rýchlo ťa pohlcuje tma, keď máš fakľu pod plášťom (násobok oproti úplnej tme). */
+const SHIELD_DREAD = 0.55;
+// --- Miazma: nákaza rastie v oblaku, mimo neho pomaly klesá ---
+const INFECT_RATE = 0.34;
+const INFECT_HEAL = 0.1;
+const FOG_BURN = 4;
+const FOG_REGROW = 0.1;
+// --- Horľavé barikády ---
+const BARRICADE_BURN = 1.1;
+/** Po koľkých sekundách horenia preskočí oheň na susedné dosky. */
+const BARRICADE_SPREAD = 0.35;
+export const BARRICADE_LIGHT = 46;
 export const OIL_DRAIN = 3;
 export const FLARE_DRAIN = 20;
 export const FIREFLY_OIL = 12;
@@ -168,13 +184,19 @@ export type GameEvent =
   | { type: 'lunge' }
   | { type: 'ghoulNotice'; x: number; y: number }
   | { type: 'ghoulDie'; x: number; y: number }
+  | { type: 'ignite'; x: number; y: number }
+  | { type: 'burnt'; x: number; y: number }
+  | { type: 'herb'; x: number; y: number }
+  | { type: 'shield'; on: boolean }
+  | { type: 'fogBurn'; x: number; y: number }
   | { type: 'gust'; dir: number }
   | { type: 'lightning' }
   | { type: 'died'; cause: DeathCause }
   | { type: 'respawn' }
   | { type: 'exit' };
 
-export type DeathCause = 'thorns' | 'fall' | 'dark' | 'water' | 'icicle' | 'shade' | 'ghoul';
+export type DeathCause =
+  'thorns' | 'fall' | 'dark' | 'water' | 'icicle' | 'shade' | 'ghoul' | 'miasma';
 
 export interface Player {
   /** Ľavý horný roh hitboxu. */
@@ -273,6 +295,14 @@ export interface Crumble {
   timer: number;
 }
 
+export interface Barricade {
+  col: number;
+  row: number;
+  state: 'solid' | 'burning' | 'gone';
+  /** Ako dlho už horí. */
+  timer: number;
+}
+
 export interface Pickup extends Point {
   taken: boolean;
 }
@@ -310,6 +340,17 @@ export class Game {
   readonly sparks: Spark[] = [];
   readonly crumbles: Crumble[] = [];
   private crumbleAt = new Map<number, Crumble>();
+  readonly barricades: Barricade[] = [];
+  private barricadeAt = new Map<number, Barricade>();
+  readonly herbs: Pickup[];
+  /** Hustota miazmy po políčkach (0–1) a jej pôvodná hodnota (dorastá späť). */
+  readonly fog: Float32Array;
+  private fogHome: Float32Array;
+  private fogCells: number[];
+  /** Nákaza hráča (1 = smrť). */
+  infection = 0;
+  /** Fakľa je ukrytá pod plášťom. */
+  shielded = false;
   readonly icicles: Icicle[];
   readonly movers: Mover[];
   /** Index plošiny, na ktorej hráč stojí (−1 = žiadna). */
@@ -420,6 +461,22 @@ export class Game {
         step: 0,
       };
     });
+    this.herbs = level.herbs.map((p) => ({ ...p, taken: false }));
+    this.fog = new Float32Array(level.width * level.height);
+    for (const f of level.fog) this.fog[f.row * level.width + f.col] = 1;
+    this.fogHome = this.fog.slice();
+    this.fogCells = level.fog.map((f) => f.row * level.width + f.col);
+    level.tiles.forEach((tile, i) => {
+      if (tile !== Tile.Barricade) return;
+      const b: Barricade = {
+        col: i % level.width,
+        row: Math.floor(i / level.width),
+        state: 'solid',
+        timer: 0,
+      };
+      this.barricades.push(b);
+      this.barricadeAt.set(i, b);
+    });
     level.tiles.forEach((tile, i) => {
       if (tile !== Tile.Crumble) return;
       const c: Crumble = {
@@ -460,6 +517,13 @@ export class Game {
       if (l.lit) lights.push({ x: l.x, y: l.y, radius: LANTERN_RADIUS });
     if (this.exitLit) lights.push({ ...this.level.exit, radius: LANTERN_RADIUS * 1.5 });
     for (const sp of this.sparks) lights.push({ x: sp.x, y: sp.y, radius: SPARK_RADIUS });
+    for (const b of this.barricades)
+      if (b.state === 'burning')
+        lights.push({
+          x: b.col * TILE + TILE / 2,
+          y: b.row * TILE + TILE / 2,
+          radius: BARRICADE_LIGHT,
+        });
     return lights;
   }
 
@@ -486,6 +550,7 @@ export class Game {
       this.updateGhouls(dt);
       this.updateSparks(dt);
       this.updateCrumbles(dt);
+      this.updateBarricades(dt);
       this.updateMovers();
       this.updateIcicles(dt);
       return this.events;
@@ -493,6 +558,8 @@ export class Game {
     this.updateWeather(dt);
     this.updateLight(dt, input);
     this.updateCrumbles(dt);
+    this.updateBarricades(dt);
+    this.updateFog(dt);
     this.updateMovers();
     this.updatePlayer(dt, input);
     this.updateIcicles(dt);
@@ -543,19 +610,96 @@ export class Game {
   }
 
   private updateLight(dt: number, input: Input): void {
-    const wantsFlare = input.flare && this.oil > 0;
+    // Fakľa pod plášťom (↓): nedá sa pri nej rozžiariť ani hádzať iskry.
+    const shield = input.down && this.oil > 0;
+    if (shield !== this.shielded) this.events.push({ type: 'shield', on: shield });
+    this.shielded = shield;
+    const wantsFlare = input.flare && this.oil > 0 && !shield;
     if (wantsFlare && !this.flareHeld) this.events.push({ type: 'flare' });
     this.flareHeld = wantsFlare;
     this.flaring = wantsFlare;
-    this.oil = Math.max(0, this.oil - (wantsFlare ? FLARE_DRAIN : OIL_DRAIN) * dt);
-    const target = this.flaring ? FLARE_RADIUS : baseRadius(this.oil);
-    this.radius += (target - this.radius) * Math.min(1, dt * (this.flaring ? 10 : 4));
-    if (this.oil <= 0) {
-      this.dread += dt;
+    const drain = wantsFlare ? FLARE_DRAIN : shield ? OIL_DRAIN * SHIELD_DRAIN : OIL_DRAIN;
+    this.oil = Math.max(0, this.oil - drain * dt);
+    const target = this.flaring ? FLARE_RADIUS : shield ? SHIELD_RADIUS : baseRadius(this.oil);
+    this.radius += (target - this.radius) * Math.min(1, dt * (this.flaring || shield ? 10 : 4));
+    if (this.oil <= 0 || shield) {
+      this.dread += dt * (shield ? SHIELD_DREAD : 1);
       if (this.dread >= DREAD_LIMIT) this.die('dark');
     } else {
       this.dread = Math.max(0, this.dread - dt * 3);
     }
+    // Rozžiarená fakľa podpáli barikády nablízku.
+    if (this.flaring) {
+      const lamp = this.lamp;
+      for (const b of this.barricades) {
+        if (b.state !== 'solid') continue;
+        const bx = b.col * TILE + TILE / 2;
+        const by = b.row * TILE + TILE / 2;
+        if (Math.hypot(bx - lamp.x, by - lamp.y) < this.radius * 0.45) this.ignite(b);
+      }
+    }
+  }
+
+  private ignite(b: Barricade): void {
+    if (b.state !== 'solid') return;
+    b.state = 'burning';
+    b.timer = 0;
+    this.events.push({ type: 'ignite', x: b.col * TILE + TILE / 2, y: b.row * TILE + TILE / 2 });
+  }
+
+  /** Horiace barikády zhoria a oheň sa šíri na susedné. */
+  private updateBarricades(dt: number): void {
+    const w = this.level.width;
+    for (const b of this.barricades) {
+      if (b.state !== 'burning') continue;
+      const before = b.timer;
+      b.timer += dt;
+      if (before < BARRICADE_SPREAD && b.timer >= BARRICADE_SPREAD)
+        for (const [dc, dr] of [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1],
+        ] as const) {
+          const n = this.barricadeAt.get((b.row + dr) * w + b.col + dc);
+          if (n) this.ignite(n);
+        }
+      if (b.timer >= BARRICADE_BURN) {
+        b.state = 'gone';
+        this.events.push({ type: 'burnt', x: b.col * TILE + TILE / 2, y: b.row * TILE + TILE / 2 });
+      }
+    }
+  }
+
+  /** Miazma: rozžiarená fakľa ju spaľuje, pomaly dorastá; hráča v nej nakazí. */
+  private updateFog(dt: number): void {
+    const w = this.level.width;
+    const lamp = this.lamp;
+    for (const i of this.fogCells) {
+      const home = this.fogHome[i]!;
+      let d = this.fog[i]!;
+      if (this.flaring && this.state === 'play') {
+        const cx = (i % w) * TILE + TILE / 2;
+        const cy = Math.floor(i / w) * TILE + TILE / 2;
+        if (Math.hypot(cx - lamp.x, cy - lamp.y) < this.radius * 0.75) {
+          if (d > 0.5 && d - dt * FOG_BURN <= 0.5)
+            this.events.push({ type: 'fogBurn', x: cx, y: cy });
+          d = Math.max(0, d - dt * FOG_BURN);
+        }
+      }
+      this.fog[i] = Math.min(home, d + dt * FOG_REGROW);
+    }
+    if (this.state !== 'play') return;
+    const c = this.center;
+    const col = Math.floor(c.x / TILE);
+    let density = 0;
+    for (const y of [this.player.y + 2, c.y, this.player.y + PLAYER_H - 2])
+      density = Math.max(density, this.fog[Math.floor(y / TILE) * w + col] ?? 0);
+    if (col < 0 || col >= w) density = 0;
+    if (density > 0.05) {
+      this.infection += dt * INFECT_RATE * density;
+      if (this.infection >= 1) this.die('miasma');
+    } else this.infection = Math.max(0, this.infection - dt * INFECT_HEAL);
   }
 
   private updatePlayer(dt: number, input: Input): void {
@@ -566,7 +710,8 @@ export class Game {
     if (move !== 0) {
       p.facing = move > 0 ? 1 : -1;
       const accel = ice ? ICE_ACCEL : p.onGround ? GROUND_ACCEL : AIR_ACCEL;
-      p.vx = approach(p.vx, move * RUN_SPEED, accel * dt);
+      const speed = this.shielded ? RUN_SPEED * SHIELD_SPEED : RUN_SPEED;
+      p.vx = approach(p.vx, move * speed, accel * dt);
     } else if (p.onGround) {
       p.vx = approach(p.vx, 0, (ice ? ICE_FRICTION : FRICTION) * dt);
     } else {
@@ -605,6 +750,7 @@ export class Game {
     }
     this.moveX((p.vx + drift) * dt, lights);
     const wasOnGround = p.onGround;
+    // Z trámu sa zoskočí šípkou dole (pri ukrývaní fakle na tráme teda spadneš nižšie).
     this.moveY(p.vy * dt, lights, input.down);
     this.landOnMovers();
     if (p.onGround && !wasOnGround) this.events.push({ type: 'land' });
@@ -622,6 +768,8 @@ export class Game {
     if (isGround(tile)) return true;
     if (tile === Tile.Crumble)
       return this.crumbleAt.get(row * this.level.width + col)?.state !== 'gone';
+    if (tile === Tile.Barricade)
+      return this.barricadeAt.get(row * this.level.width + col)?.state !== 'gone';
     if (tile === Tile.Light) return !overlapping && this.isTileLit(col, row, lights);
     return false;
   }
@@ -836,7 +984,13 @@ export class Game {
     this.sparkCooldown = Math.max(0, this.sparkCooldown - dt);
     const pressed = input.spark && !this.sparkHeld;
     this.sparkHeld = input.spark;
-    if (!pressed || this.sparkCooldown > 0 || this.oil <= SPARK_OIL || this.state !== 'play')
+    if (
+      !pressed ||
+      this.shielded ||
+      this.sparkCooldown > 0 ||
+      this.oil <= SPARK_OIL ||
+      this.state !== 'play'
+    )
       return;
     this.oil -= SPARK_OIL;
     this.sparkCooldown = SPARK_COOLDOWN;
@@ -858,9 +1012,13 @@ export class Game {
       const col = Math.floor(sp.x / TILE);
       const row = Math.floor(sp.y / TILE);
       const tile = tileAt(this.level, col, row);
+      const barricade =
+        tile === Tile.Barricade ? this.barricadeAt.get(row * this.level.width + col) : undefined;
+      if (barricade?.state === 'solid') this.ignite(barricade);
       const blocked =
         isGround(tile) ||
         tile === Tile.Water ||
+        (barricade !== undefined && barricade.state !== 'gone') ||
         (tile === Tile.Crumble &&
           this.crumbleAt.get(row * this.level.width + col)?.state !== 'gone');
       let hit = false;
@@ -1011,7 +1169,8 @@ export class Game {
         const tx = c.x + Math.cos(s.angle) * reach;
         const ty = c.y + Math.sin(s.angle) * reach * 0.8;
         steer(s, tx, ty, 48, dt);
-        if (s.timer <= 0 && dist < reach + 70 && this.state === 'play') {
+        // Kým je fakľa pod plášťom, prízrak stratí stopu a nezaútočí.
+        if (s.timer <= 0 && dist < reach + 70 && this.state === 'play' && !this.shielded) {
           s.state = 'windup';
           s.timer = WINDUP;
           this.events.push({ type: 'windup' });
@@ -1068,7 +1227,9 @@ export class Game {
       if (alive && this.tryStompGhoul(g)) continue;
       const dx = pcx - g.x;
       const sameFloor = Math.abs(pFeet - g.y) < 26;
-      const sees = alive && sameFloor && Math.abs(dx) < this.radius + GHOUL_SIGHT;
+      // Fakľu pod plášťom nevidia; zbadajú hráča, až keď do nich takmer narazí.
+      const sight = this.shielded ? 18 : this.radius + GHOUL_SIGHT;
+      const sees = alive && sameFloor && Math.abs(dx) < sight;
       if (sees && !g.chasing) this.events.push({ type: 'ghoulNotice', x: g.x, y: g.y - GHOUL_H });
       g.chasing = sees;
 
@@ -1115,8 +1276,13 @@ export class Game {
     const row = Math.floor((feet - 1) / TILE);
     const level = this.level;
     const body = [row, Math.floor((feet - GHOUL_H + 1) / TILE)];
-    if (body.some((r) => isGround(tileAt(level, col, r)) || tileAt(level, col, r) === Tile.Crumble))
-      return true;
+    const wall = (r: number) => {
+      const t = tileAt(level, col, r);
+      if (t === Tile.Barricade)
+        return this.barricadeAt.get(r * level.width + col)?.state !== 'gone';
+      return isGround(t) || t === Tile.Crumble;
+    };
+    if (body.some(wall)) return true;
     if (
       body.some(
         (r) => tileAt(level, col, r) === Tile.Thorns || tileAt(level, col, r) === Tile.Water,
@@ -1153,6 +1319,12 @@ export class Game {
       f.taken = true;
       this.oil = Math.min(OIL_MAX, this.oil + FIREFLY_OIL);
       this.events.push({ type: 'firefly', x: f.x, y: f.y });
+    }
+    for (const hb of this.herbs) {
+      if (hb.taken || !near(hb, 13)) continue;
+      hb.taken = true;
+      this.infection = 0;
+      this.events.push({ type: 'herb', x: hb.x, y: hb.y });
     }
     for (const k of this.crystals) {
       if (k.taken || !near(k, 13)) continue;
@@ -1191,6 +1363,8 @@ export class Game {
     this.oil = OIL_MAX;
     this.radius = LIGHT_RADIUS;
     this.dread = 0;
+    this.infection = 0;
+    this.fog.set(this.fogHome);
     this.sparks.length = 0;
     this.onMover = -1;
     for (const ic of this.icicles) {

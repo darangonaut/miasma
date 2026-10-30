@@ -38,6 +38,9 @@ export interface Art {
   icicle(): Texture;
   mover(): Texture;
   crumble(): Texture;
+  barricade(): Texture;
+  herb(): Texture;
+  fogPuff(): Texture;
   moon(): Texture;
   /** Okrúhla častica danej farby a priemeru. */
   dot(color: string, size: number): Texture;
