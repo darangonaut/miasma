@@ -1,82 +1,76 @@
-# Lumen
+# Miasma
 
-A silhouette platformer for the browser about a little girl with a lantern in a world that has gone dark.
-Light is everything: it shows the way, keeps the shades at bay and makes bridges of light solid.
-But the oil in the lantern is slowly running out.
+A dark silhouette platformer for adults. The plague has taken the city. You are the last plague doctor, and you carry the last fire.
 
-**▶ Play online: https://darangonaut.github.io/lumen/**
+**▶ Play online: https://darangonaut.github.io/miasma/**
 
-![Lumen title screen](docs/screenshots/title.png)
+![Miasma title screen](docs/screenshots/title.png)
 
-## Seven worlds
+Miasma is the grim older sibling of [Lumen](https://github.com/darangonaut/lumen). It runs on the same engine but has a new hero, a new world and much less mercy:
 
-24 levels in six worlds, each with its own mechanic, plus a bonus seventh world unlocked after the finale.
+- **One touch kills.** Wraiths, the infected and iron spikes give no second chance.
+- **Fair warning.** Before a wraith strikes, it freezes and its eyes turn red. That is your moment.
+- **The torch burns fast.** Pitch runs out quickly, embers are rare and shrines are far apart. In total darkness you last only seconds.
+- **Enemies hunt.** The infected see your fire and come for you. You can outrun them, jump on their heads, throw a spark or flare the torch and burn them.
 
-| World                 | What awaits you                                   |
-| --------------------- | ------------------------------------------------- |
-| Misty Forest          | bridges of light, the first shades                |
-| Flooded Caves         | icy water, crumbling stones, moths                |
-| Marshes               | glowing mushrooms that launch you high            |
-| Frozen Peaks          | slippery ice and icicles that break off           |
-| Forgotten Tower       | moving platforms, chained with timed jumps        |
-| Heart of Darkness     | great shades that take three hits, and the finale |
-| Stormy Peak _(bonus)_ | wind gusts, shelter behind rocks, lightning       |
+## Four worlds
 
-|     ![Misty Forest](docs/screenshots/forest.png)      |      ![Flooded Caves](docs/screenshots/caves.png)      |
-| :---------------------------------------------------: | :----------------------------------------------------: |
-|         Misty Forest — a lamp is a checkpoint         | Flooded Caves — a shade waits at the edge of the light |
-|        ![Marshes](docs/screenshots/swamp.png)         |       ![Frozen Peaks](docs/screenshots/ice.png)        |
-|   Marshes — reeds, dead trees and will-o'-the-wisps   |     Frozen Peaks — icicles hang over slippery ice      |
-|    ![Forgotten Tower](docs/screenshots/tower.png)     |    ![Heart of Darkness](docs/screenshots/abyss.png)    |
-| Forgotten Tower — arches, chains and moving platforms |     Heart of Darkness — the last and darkest world     |
-|      ![Stormy Peak](docs/screenshots/storm.png)       |   ![Flaring the lantern](docs/screenshots/flare.png)   |
-|        Stormy Peak — rain, gusts and lightning        |       Flaring the lantern burns the shades away        |
+|     | World                  | What awaits you                                                 |
+| --- | ---------------------- | --------------------------------------------------------------- |
+| 1   | **Quarantine Quarter** | rain, a blood moon, rooftops, rotten planks, the first infected |
+| 2   | **Catacombs**          | foul sewage, slimy stones, falling masonry, swarms of flies     |
+| 3   | **Plague Pits**        | an open cemetery, wind in gusts, lightning, great wraiths       |
+| 4   | **The Cathedral**      | hanging platforms, the bell tower, the crypt and the final pyre |
+
+Each world has 4 levels, 16 in total. At the end of every path you light a pyre, because fire purifies.
+
+<table>
+<tr>
+<td><img src="docs/screenshots/quarter.png" alt="Quarantine Quarter"><br><sub>Quarantine Quarter: rain and a blood moon over the plague city</sub></td>
+<td><img src="docs/screenshots/wraiths.png" alt="Plague wraiths"><br><sub>A flared torch burns everything close, but eats pitch quickly</sub></td>
+</tr>
+<tr>
+<td><img src="docs/screenshots/catacombs.png" alt="Catacombs"><br><sub>Catacombs: walls of skulls and foul sewage</sub></td>
+<td><img src="docs/screenshots/pits.png" alt="Plague Pits"><br><sub>Plague Pits: gravestones, dead trees and a sickly moon</sub></td>
+</tr>
+<tr>
+<td colspan="2"><img src="docs/screenshots/cathedral.png" alt="The Cathedral"><br><sub>The Cathedral: stained glass faintly glowing in the dark</sub></td>
+</tr>
+</table>
 
 ## How to play
 
-- **Oil** in your lantern slowly burns away. **Fireflies** refill it. When it runs out, the darkness takes you.
-- **Bridges of light** only exist in the light. Where your lantern doesn't reach, you can't step.
-- **Flaring** the lantern makes the light bigger, reveals distant platforms and burns shades — but it uses a lot of oil.
-- **Shades** circle at the edge of the light and wait for you to falter. Their touch steals oil.
-  Defeat them by **jumping on their heads**, throwing a **spark** (costs a little oil) or flaring the lantern.
-- **Moths** chase the light and drink oil from your lantern.
-- **Lamps** on posts are checkpoints and refill your oil. Next to a lit lamp you are safe from shades.
-- Light the **campfire** at the end of every level. Those who look around will find hidden **crystals**.
-- On Stormy Peak the **wind** blows in gusts: it pushes you in mid-air, but it can't move you while you stand still.
-  Wait behind a rock, and jump when the wind dies down.
+| Action                       | Keyboard         | Touch    |
+| ---------------------------- | ---------------- | -------- |
+| Walk                         | ← → / A D        | ◀ ▶      |
+| Jump (hold to float further) | Space / ↑ / W    | ⤒        |
+| Throw a spark                | C / F            | ✸        |
+| Flare the torch              | Shift / X (hold) | ✦ (hold) |
+| Pause                        | Esc / P          | ❚❚       |
 
-## Controls
+- **Embers** keep the torch burning. **Relics** are hidden secrets.
+- **Shrines** are checkpoints. Light the candle to save your progress and refill the torch.
+- Jump on enemies' heads, throw sparks or flare the torch. A great wraith takes three hits.
+- On the cemetery, jump when the wind dies down. Standing still, it can't move you, and behind a gravestone you are sheltered.
 
-| Action                     | Keyboard      | Touch |
-| -------------------------- | ------------- | ----- |
-| Walk                       | ← → / A D     | ◀ ▶   |
-| Jump (hold to jump higher) | Space / ↑ / W | ⤒     |
-| Drop through a ledge       | ↓ / S         |       |
-| Throw a spark              | C / F         | ✸     |
-| Flare the lantern          | Shift / X     | ✦     |
-| Pause                      | Esc / P       | ❚❚    |
+## Languages and mobile
 
-The game is available in **English**, **Slovak** and **Czech**, and works on phones held sideways.
+English (default), Slovak and Czech; switch on the title screen. The game works in a phone browser turned sideways, with touch controls.
 
-<p align="center"><img src="docs/screenshots/mobile.png" alt="Lumen on a phone with touch controls" width="640"></p>
+<p align="center"><img src="docs/screenshots/mobile.png" alt="Miasma on a phone with touch controls" width="640"></p>
 
 ## Development
 
-Built with TypeScript, Vite and PixiJS 8. All graphics are vector silhouettes drawn in code
-(`src/render/vector.ts`): a black foreground against a glowing sky, where only light has colour.
-Sound is synthesized with the Web Audio API — the game has no image or audio files.
-
-- `src/game/` — pure game logic in TypeScript, with no PixiJS or DOM (enforced by ESLint).
-- `src/game/levels.ts` — levels as ASCII maps; the legend is in `src/game/level.ts`.
-- `src/render/` — rendering: terrain, darkness with light cut-outs, parallax backgrounds, particles.
-- `src/ui/` — title scene and translations (`i18n.ts`).
-- `tests/` — logic tests and a bot that plays every level to prove it can be completed.
+TypeScript, Vite and PixiJS 8. All graphics are vector shapes drawn in code, and all music and sound effects are synthesized with the Web Audio API, so there are no image or audio files.
 
 ```bash
 npm install
-npm run dev          # development server
-npm test             # logic tests and level completion bot
-npm run deploy:pages # deploy to GitHub Pages
+npm run dev          # local server
+npm test             # tests, including a bot that proves every level can be finished
+npm run deploy:pages # build and publish to GitHub Pages
 ```
 
-Debugging: `?debug&level=N` starts directly at level N (1–28).
+- `src/game/` holds pure game logic (no PixiJS or DOM).
+- Levels are ASCII maps generated by `scripts/build_levels.py`. The legend is in `src/game/level.ts`.
+- `src/render/` holds the renderer, the vector art and the plague doctor.
+- `src/audio/` holds sound effects and music (organ chorale, viol and a tolling bell).
