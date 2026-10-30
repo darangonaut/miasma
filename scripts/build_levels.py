@@ -669,11 +669,55 @@ def extend(lv, world, id_, diff, extra, hints):
         lv.ceiling(old, lv.w - 1)
 
 
+SHRINE_GAP = 45
+
+
+def add_shrines(lv, id_):
+    """Kaplnky (checkpointy) najviac každých SHRINE_GAP stĺpcov: za dlhou medzerou sa nová
+    postaví na najbližšie bezpečné miesto (rovná zem, voľno nad ňou, žiadne nástrahy okolo)."""
+    def col_of(ch):
+        return sorted(x for r in lv.g for x, c in enumerate(r) if c == ch)
+    start = col_of('P')[0]
+    end = col_of('E')[0]
+    danger = set('^wcbxHV~gsSE')
+
+    def spot(x):
+        for row in range(2, H):
+            if lv.g[row][x] != '#':
+                continue
+            if lv.g[row - 1][x] != ' ' or lv.g[row - 2][x] != ' ':
+                return None
+            if lv.g[row][x - 1] != '#' or lv.g[row][x + 1] != '#':
+                return None
+            near = {lv.g[r][c] for r in range(max(0, row - 4), min(H, row + 1))
+                    for c in range(x - 2, x + 3)}
+            return row - 1 if not near & danger else None
+        return None
+
+    last = start
+    shrines = col_of('L')
+    x = start + 1
+    while x < end - 8:
+        if x in shrines:
+            last = x
+        elif x - last >= SHRINE_GAP:
+            row = spot(x)
+            if row is not None:
+                lv.g[row][x] = 'L'
+                last = x
+        x += 1
+    # Kontrola: nikde nesmie ostať príliš dlhý úsek bez kaplnky.
+    pts = [start] + col_of('L') + [end]
+    worst = max(b - a for a, b in zip(pts, pts[1:]))
+    assert worst <= SHRINE_GAP + 25, (id_, worst)
+
+
 for i, (world, id_, name, hints, lv) in enumerate(levels):
     if hints is None:
         hints = []
     levels[i] = (world, id_, name, hints, lv)
     extend(lv, world, id_, i, lv.w, hints)
+    add_shrines(lv, id_)
 
 
 out = [

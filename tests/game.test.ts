@@ -730,6 +730,17 @@ describe('nové svety', () => {
     expect(game.fireflies[1]!.taken).toBe(false);
   });
 
+  it('kaplnky sú v každom leveli najviac ~60 políčok od seba', () => {
+    for (const def of LEVELS) {
+      const level = parseLevel(def);
+      const cols = [level.start, ...level.lanterns, level.exit]
+        .map((p) => p.x / TILE)
+        .sort((a, b) => a - b);
+      const worst = Math.max(...cols.slice(1).map((c, i) => c - cols[i]!));
+      expect(worst, def.id).toBeLessThanOrEqual(65);
+    }
+  });
+
   it('mimo cintorína nefúka', () => {
     const game = make(FLAT);
     run(game, 6);
