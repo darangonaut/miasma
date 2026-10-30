@@ -687,6 +687,23 @@ describe('nové svety', () => {
     expect(g.alive).toBe(false);
   });
 
+  it('príbeh: každý level má stranu denníka a koniec závisí od zachránených', async () => {
+    const { ending, secretUnlocked } = await import('@/game/story');
+    let survivors = 0;
+    for (const def of LEVELS) {
+      const level = parseLevel(def);
+      expect(level.crystals.length, def.id).toBe(1);
+      expect(level.nests.length, def.id).toBeGreaterThanOrEqual(2);
+      survivors += level.survivors.length;
+    }
+    expect(survivors).toBeGreaterThanOrEqual(16);
+    expect(ending(15, 20)).toBe('good');
+    expect(ending(8, 20)).toBe('mid');
+    expect(ending(2, 20)).toBe('bad');
+    expect(secretUnlocked(16, 16)).toBe(true);
+    expect(secretUnlocked(15, 16)).toBe(false);
+  });
+
   it('mimo cintorína nefúka', () => {
     const game = make(FLAT);
     run(game, 6);

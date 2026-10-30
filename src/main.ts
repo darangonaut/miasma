@@ -17,6 +17,7 @@ import {
   type GameEvent,
 } from './game/game';
 import { parseLevel } from './game/level';
+import { ending, secretUnlocked } from './game/story';
 import { LEVELS } from './game/levels';
 import {
   SHOP,
@@ -47,6 +48,7 @@ const hurt = $('#hurt');
 const dread = $('#dread');
 const sick = $('#sick');
 const touch = $('#touch');
+const diary = $('#diary');
 
 // --- Uložený postup ---
 const SAVE_KEY = 'miasma.save';
@@ -78,6 +80,28 @@ let levelIndex = 0;
 let paused = false;
 let doneTimer = -1;
 let oilWarned = false;
+/** Otvorená strana denníka: hra stojí, kým ju hráč nezavrie. */
+let diaryOpen = false;
+let diaryShownAt = 0;
+
+function openDiary(title: string, text: string): void {
+  $('.diary-title').textContent = title;
+  $('.diary-text').textContent = text;
+  $('.diary-close').textContent = t('diaryClose');
+  diary.hidden = false;
+  diaryOpen = true;
+  diaryShownAt = performance.now();
+  controls.reset();
+}
+
+function closeDiary(): void {
+  // Krátka pauza, aby stlačenie, ktorým hráč stranu zdvihol, ju hneď nezavrelo.
+  if (!diaryOpen || performance.now() - diaryShownAt < 600) return;
+  diary.hidden = true;
+  diaryOpen = false;
+  controls.reset();
+}
+diary.addEventListener('pointerdown', closeDiary);
 /** Súčty za celý svet (pre záverečnú obrazovku). */
 const title = new TitleScene($<HTMLCanvasElement>('.title-bg'));
 
@@ -206,6 +230,10 @@ async function startLevel(index: number): Promise<void> {
   touch.hidden = !controls.touchMode;
   document.body.classList.add('playing');
   $('.level-label').textContent = levelLabel(index);
+  diary.hidden = true;
+  diaryOpen = false;
+  // Nová hra začína prológom.
+  if (index === 0 && save.unlocked === 0) openDiary(t('diaryTitle'), t('prologue'));
   showBanner(levelName(index), levelLabel(index));
   if (import.meta.env.DEV || new URLSearchParams(location.search).has('debug'))
     (window as unknown as { __miasma: unknown }).__miasma = { game, renderer };
@@ -268,6 +296,10 @@ $('.next').addEventListener('click', () => {
 $('.replay').addEventListener('click', () => void startLevel(levelIndex));
 $('.victory-menu').addEventListener('click', () => toMenu());
 window.addEventListener('keydown', (e) => {
+  if (diaryOpen) {
+    if (!e.repeat) closeDiary();
+    return;
+  }
   if (e.code === 'Escape' || e.code === 'KeyP') setPaused(!paused);
   else if ((e.code === 'Enter' || e.code === 'Space') && !done.hidden) {
     // Medzerník je aj skok: len nové stlačenie a až chvíľu po zobrazení obrazovky.
@@ -382,16 +414,38 @@ function showVictory(): void {
   let ft = 0;
   let c = 0;
   let ct = 0;
+  let s = 0;
+  let st = 0;
   for (const def of LEVELS) {
     const level = parseLevel(def);
     ft += level.fireflies.length;
     ct += level.crystals.length;
+    st += level.survivors.length;
     f += save.best[def.id]?.fireflies ?? 0;
     c += save.best[def.id]?.crystals ?? 0;
+    s += save.best[def.id]?.survivors ?? 0;
   }
-  $('.victory-stats').textContent = t('victoryStats', { f, ft, c, ct, d: game?.deaths ?? 0 });
-  $('.victory-title').textContent = t('victoryTitle');
-  $('.victory-story').textContent = t('victoryStory');
+  $('.victory-stats').textContent = t('victoryStats', {
+    f,
+    ft,
+    c,
+    ct,
+    s,
+    st,
+    d: game?.deaths ?? 0,
+  });
+  // Koniec podľa zachránených; so všetkými stranami denníka aj tajomstvo.
+  const end = ending(s, st);
+  const ENDINGS = {
+    good: ['endGoodTitle', 'endGood'],
+    mid: ['endMidTitle', 'endMid'],
+    bad: ['endBadTitle', 'endBad'],
+  } as const;
+  $('.victory-title').textContent = t(ENDINGS[end][0]);
+  $('.victory-story').textContent = t(ENDINGS[end][1]);
+  const secret = $('.victory-secret');
+  secret.hidden = !secretUnlocked(c, ct);
+  secret.textContent = t('endSecret');
   $('.coming-soon').textContent = t('comingSoon');
   sound.setWind(0);
   game = null;
@@ -407,6 +461,8 @@ function onEvents(events: GameEvent[]): void {
       window.setTimeout(() => (hurt.style.opacity = '0'), 160);
     } else if (e.type === 'died') {
       showToast(t(DEATHS[e.cause]!));
+    } else if (e.type === 'crystal') {
+      openDiary(t('diaryTitle'), t(`page${levelIndex + 1}` as Key));
     } else if (e.type === 'saved') {
       showToast(t('savedToast'));
     } else if (e.type === 'turned') {
@@ -438,7 +494,7 @@ function updateHud(g: Game): void {
   $('.fireflies').textContent = `✶ ${g.fireflyCount}/${g.fireflies.length}`;
   $('.herbs').textContent = `❦ ${g.herbsCarried}/${HERB_MAX}`;
   $('.herb-btn').classList.toggle('empty', g.herbsCarried === 0);
-  $('.crystals').textContent = g.crystals.length ? `✝ ${g.crystalCount}/${g.crystals.length}` : '';
+  $('.crystals').textContent = g.crystals.length ? `❧ ${g.crystalCount}/${g.crystals.length}` : '';
   // Morový zvon: pásik sa plní do ďalšieho úderu, pri besnení sa vyprázdňuje.
   const bell = $('.bell');
   const left = g.nextBell - g.time;
@@ -469,7 +525,8 @@ function frame(now: number): void {
   const dt = Math.min(0.1, (now - last) / 1000);
   last = now;
   if (game && !paused) {
-    acc += dt;
+    // Pri otvorenej strane denníka hra stojí, obraz sa však kreslí ďalej.
+    acc = diaryOpen ? 0 : acc + dt;
     while (acc >= STEP) {
       acc -= STEP;
       const events = game.step(STEP, controls.read());

@@ -74,6 +74,53 @@ const en = {
   diedMiasma: 'The miasma choked you…',
   diedRats: 'The rats ate you alive…',
   oilLow: 'The torch is dying!',
+  diaryTitle: 'From the plague doctor’s diary',
+  diaryClose: 'Press any key to continue',
+  prologue:
+    'Anno Domini 1348. The city is quarantined behind its walls and you are the last plague doctor still walking its streets. Burn the plague nests, help those who can still be helped, and light the pyres. Fire purifies.',
+  page1:
+    'Day one. The council paid me in advance and locked the gates behind me. They gave me a torch, a cane and a list of streets to burn. Nobody asked my name.',
+  page2:
+    'People hide in attics and under canvas. When I carry light, they flee from me. When I don’t, they come closer — and some of them are no longer people.',
+  page3:
+    'The priest says the wraiths are the souls of those who died without a candle. I only know they fear fire. And I fear the moment my fire burns out.',
+  page4:
+    'They hanged the baker in the square for poisoning the well. But the plague did not come from the well. It came from below, from the catacombs — I can smell it through the herbs in my beak.',
+  page5:
+    'Beneath the city lie the bones of centuries, and the miasma rises from the ground like breath. Today I noticed a fingernail gone black under my glove.',
+  page6:
+    'Rats. Thousands. They fear the light, but in the dark they are bold as wolves. I understood they do not carry the plague. They are only hungry. We carry it.',
+  page7:
+    'I pulled a girl out of the sewer and gave her my last herb. As I left, I coughed into my mask and hoped she did not hear.',
+  page8:
+    'The spring beneath the catacombs is the source. The water is clear but the air above it is green. The council knew. They locked the gates so the plague would not leave — and us with it.',
+  page9:
+    'The wind on the cemetery nearly kills my torch. The gravediggers no longer dig graves. They dig pits.',
+  page10:
+    'Among the dead I saw faces I treated yesterday. My herbs did not help. Or helped only for a day.',
+  page11:
+    'A gravedigger told me the doctor before me never came back either. He wore the same mask, they say. Perhaps it is the same mask.',
+  page12:
+    'The marks reach my elbow now. Under the cloak no one sees them. As long as the torch burns, I am still a doctor — not one of them.',
+  page13:
+    'In the cathedral, those who still believe are praying. The bishop blessed me and let me in. He has no idea what I carry under my cloak.',
+  page14:
+    'The bell tolls for the dead and the infected come to its voice. Who rang it the first time? Who wanted them to come?',
+  page15:
+    'Under the altar I found the council’s letters. The city was never meant to be cured. It was meant to be burnt — with me in it. That is why they gave me a torch.',
+  page16:
+    'The great pyre is ready. I will light it — not because they ordered me to, but because someone must. And if I burn in it too, let no one mourn me.',
+  endGoodTitle: 'The city lives',
+  endGood:
+    'The pyre burned for three days. When the smoke cleared, the people you saved came out of cellars and attics. They remembered the man in the beaked mask, though no one knew his name. In the square they raised a stone cross without an inscription.',
+  endMidTitle: 'Ash and silence',
+  endMid:
+    'The pyre burned out and the bells fell silent. A handful survived; they spoke of the doctor quietly, as of someone who came too late. His mask was found on the cathedral steps. Empty.',
+  endBadTitle: 'City of the dead',
+  endBad:
+    'The pyre burned over empty streets. You did not save even those who begged. When the council’s soldiers came, they found only ash — and in it, a doctor’s cane.',
+  endSecret:
+    'A diary lay by the pyre. Its last line read: “The council sent me to burn the city. I chose to heal it.”',
   shopTitle: 'Apothecary',
   coins: 'Groschen: {n} ₰',
   coinsEarned: 'The council paid you {n} ₰ (survivors, relics, nests).',
@@ -108,9 +155,6 @@ const en = {
   stats: 'Embers {f}/{ft} · Relics {c}/{ct} · Time {time} · Deaths {d}',
   next: 'Next',
   replay: 'Replay',
-  victoryTitle: 'The plague is burnt out',
-  victoryStory:
-    'The doctor carried his torch through the streets, the catacombs, the plague pits and the cathedral. When the great pyre caught fire, the bells fell silent. By morning the smoke rose over a city that would live. No one remembered his name.',
   victoryStats: 'Embers {f}/{ft} · Relics {c}/{ct} · Deaths {d}',
   comingSoon: 'Thank you for playing Miasma.',
   toMenu: 'Main menu',
@@ -199,6 +243,52 @@ const sk: Record<Key, string> = {
   diedMiasma: 'Udusila ťa miazma…',
   diedRats: 'Zožrali ťa potkany…',
   oilLow: 'Fakľa dohára!',
+  diaryTitle: 'Z denníka morového lekára',
+  diaryClose: 'Pokračuj ľubovoľným klávesom',
+  prologue:
+    'Rok Pána 1348. Mesto je za hradbami v karanténe a ty si posledný morový lekár, ktorý ešte chodí jeho ulicami. Spáľ morové hniezda, pomôž tým, ktorým sa ešte dá, a zapáľ hranice. Oheň očisťuje.',
+  page1:
+    'Deň prvý. Rada mi zaplatila vopred a brány za mnou zamkli. Dali mi fakľu, palicu a zoznam ulíc, ktoré treba vypáliť. Na meno sa ma nikto nespýtal.',
+  page2:
+    'Ľudia sa schovávajú na povalách a pod plachtami. Keď svietim, utekajú predo mnou. Keď nesvietim, prídu bližšie — a niektorí už nie sú ľudia.',
+  page3:
+    'Kňaz tvrdí, že prízraky sú duše tých, čo zomreli bez sviečky. Viem len, že sa boja ohňa. A ja sa bojím chvíle, keď mi oheň dohorí.',
+  page4:
+    'Na námestí obesili pekára, vraj otrávil studňu. Mor však neprišiel zo studne. Prišiel zdola, od katakomb — cítim ho aj cez byliny v zobáku.',
+  page5:
+    'Pod mestom ležia kosti stáročí a miazma tu stúpa zo zeme ako dych. Dnes som si všimol, že mi pod rukavicou sčernel necht.',
+  page6:
+    'Potkany. Tisíce. Svetla sa boja, no v tme sú odvážne ako vlci. Pochopil som, že mor nenosia ony. Sú len hladné. Mor nosíme my.',
+  page7:
+    'Zo stoky som vytiahol dievča a dal jej poslednú bylinu. Keď som odchádzal, kašľal som do masky a dúfal, že to nepočula.',
+  page8:
+    'Prameň pod katakombami je zdroj. Voda je čistá, ale vzduch nad ňou zelený. Rada o ňom vedela. Zamkli brány, aby mor neodišiel — a nás s ním.',
+  page9: 'Na cintoríne fúka tak, že fakľa sotva horí. Hrobári už nekopú hroby. Kopú jamy.',
+  page10:
+    'Medzi mŕtvymi som videl tváre, ktoré som včera liečil. Moje byliny nepomohli. Alebo pomohli len na deň.',
+  page11:
+    'Hrobár mi povedal, že lekár pred mnou sa tiež nevrátil. Nosil vraj rovnakú masku. Možno je to tá istá maska.',
+  page12:
+    'Škvrny mi siahajú po lakeť. Pod plášťom ich nik nevidí. Kým horí fakľa, som ešte lekár — nie jeden z nich.',
+  page13:
+    'V katedrále sa modlia tí, čo ešte veria. Biskup ma požehnal a pustil dnu. Netuší, čo nesiem pod plášťom.',
+  page14:
+    'Zvon bije pre mŕtvych a nakazení prichádzajú na jeho hlas. Kto ho rozhúpal prvý raz? Kto chcel, aby prišli?',
+  page15:
+    'Pod oltárom som našiel listy rady. Mesto nemalo byť vyliečené. Malo byť vypálené — aj so mnou. Preto mi dali fakľu.',
+  page16:
+    'Veľká hranica je pripravená. Zapálim ju — nie preto, že mi to prikázali, ale preto, že niekto musí. A ak v nej zhorím aj ja, nech ma neľutujú.',
+  endGoodTitle: 'Mesto prežilo',
+  endGood:
+    'Hranica horela tri dni. Keď dym opadol, z pivníc a povál vyšli ľudia, ktorých si zachránil. Pamätali si muža v maske so zobákom, hoci jeho meno nepoznal nik. Na námestí mu postavili kamenný kríž bez nápisu.',
+  endMidTitle: 'Popol a ticho',
+  endMid:
+    'Hranica dohorela a zvony stíchli. Prežila hŕstka ľudí; o lekárovi rozprávali potichu, ako o niekom, kto prišiel príliš neskoro. Jeho masku našli na schodoch katedrály. Prázdnu.',
+  endBadTitle: 'Mesto mŕtvych',
+  endBad:
+    'Hranica horela nad prázdnymi ulicami. Nezachránil si ani tých, čo prosili. Keď prišli vojaci rady, našli len popol — a v ňom lekársku palicu.',
+  endSecret:
+    'Pri hranici ležal denník. Posledná veta znela: „Rada ma poslala mesto vypáliť. Ja som sa rozhodol ho vyliečiť.“',
   shopTitle: 'Lekáreň',
   coins: 'Groše: {n} ₰',
   coinsEarned: 'Rada ti vyplatila {n} ₰ (preživší, relikvie, hniezda).',
@@ -233,9 +323,6 @@ const sk: Record<Key, string> = {
   stats: 'Uhlíky {f}/{ft} · Relikvie {c}/{ct} · Čas {time} · Smrti {d}',
   next: 'Ďalej',
   replay: 'Znova',
-  victoryTitle: 'Mor vyhorel',
-  victoryStory:
-    'Lekár niesol fakľu ulicami, katakombami, morovými jamami aj katedrálou. Keď vzbĺkla veľká hranica, zvony stíchli. Ráno stúpal dym nad mestom, ktoré prežije. Jeho meno si nikto nezapamätal.',
   victoryStats: 'Uhlíky {f}/{ft} · Relikvie {c}/{ct} · Smrti {d}',
   comingSoon: 'Ďakujeme, že si hral Miasmu.',
   toMenu: 'Hlavné menu',
@@ -322,6 +409,52 @@ const cs: Record<Key, string> = {
   diedMiasma: 'Udusila tě miazma…',
   diedRats: 'Sežraly tě krysy…',
   oilLow: 'Pochodeň dohořívá!',
+  diaryTitle: 'Z deníku morového lékaře',
+  diaryClose: 'Pokračuj libovolnou klávesou',
+  prologue:
+    'Léta Páně 1348. Město je za hradbami v karanténě a ty jsi poslední morový lékař, který ještě chodí jeho ulicemi. Spal morová hnízda, pomoz těm, kterým se ještě dá, a zapal hranice. Oheň očišťuje.',
+  page1:
+    'Den první. Rada mi zaplatila předem a brány za mnou zamkla. Dali mi pochodeň, hůl a seznam ulic, které je třeba vypálit. Na jméno se mě nikdo nezeptal.',
+  page2:
+    'Lidé se schovávají na půdách a pod plachtami. Když svítím, utíkají přede mnou. Když nesvítím, přijdou blíž — a někteří už nejsou lidé.',
+  page3:
+    'Kněz tvrdí, že přízraky jsou duše těch, kdo zemřeli bez svíčky. Vím jen, že se bojí ohně. A já se bojím chvíle, kdy mi oheň dohoří.',
+  page4:
+    'Na náměstí oběsili pekaře, prý otrávil studnu. Mor ale nepřišel ze studny. Přišel zdola, od katakomb — cítím ho i přes byliny v zobáku.',
+  page5:
+    'Pod městem leží kosti staletí a miazma tu stoupá ze země jako dech. Dnes jsem si všiml, že mi pod rukavicí zčernal nehet.',
+  page6:
+    'Krysy. Tisíce. Světla se bojí, ale ve tmě jsou odvážné jako vlci. Pochopil jsem, že mor nenosí ony. Jsou jen hladové. Mor neseme my.',
+  page7:
+    'Ze stoky jsem vytáhl dívku a dal jí poslední bylinu. Když jsem odcházel, kašlal jsem do masky a doufal, že to neslyšela.',
+  page8:
+    'Pramen pod katakombami je zdroj. Voda je čistá, ale vzduch nad ní zelený. Rada o něm věděla. Zamkli brány, aby mor neodešel — a nás s ním.',
+  page9: 'Na hřbitově fouká tak, že pochodeň sotva hoří. Hrobníci už nekopou hroby. Kopou jámy.',
+  page10:
+    'Mezi mrtvými jsem viděl tváře, které jsem včera léčil. Moje byliny nepomohly. Nebo pomohly jen na den.',
+  page11:
+    'Hrobník mi řekl, že lékař přede mnou se také nevrátil. Nosil prý stejnou masku. Možná je to tatáž maska.',
+  page12:
+    'Skvrny mi sahají po loket. Pod pláštěm je nikdo nevidí. Dokud hoří pochodeň, jsem ještě lékař — ne jeden z nich.',
+  page13:
+    'V katedrále se modlí ti, kdo ještě věří. Biskup mě požehnal a pustil dovnitř. Netuší, co nesu pod pláštěm.',
+  page14:
+    'Zvon zvoní za mrtvé a nakažení přicházejí na jeho hlas. Kdo ho rozhoupal poprvé? Kdo chtěl, aby přišli?',
+  page15:
+    'Pod oltářem jsem našel dopisy rady. Město nemělo být vyléčeno. Mělo být vypáleno — i se mnou. Proto mi dali pochodeň.',
+  page16:
+    'Velká hranice je připravena. Zapálím ji — ne proto, že mi to přikázali, ale proto, že někdo musí. A jestli v ní shořím i já, ať mě nelitují.',
+  endGoodTitle: 'Město přežilo',
+  endGood:
+    'Hranice hořela tři dny. Když se dým rozptýlil, vyšli ze sklepů a půd lidé, které jsi zachránil. Pamatovali si muže v masce se zobákem, ačkoli jeho jméno nikdo neznal. Na náměstí mu postavili kamenný kříž bez nápisu.',
+  endMidTitle: 'Popel a ticho',
+  endMid:
+    'Hranice dohořela a zvony utichly. Přežila hrstka lidí; o lékaři mluvili potichu, jako o někom, kdo přišel příliš pozdě. Jeho masku našli na schodech katedrály. Prázdnou.',
+  endBadTitle: 'Město mrtvých',
+  endBad:
+    'Hranice hořela nad prázdnými ulicemi. Nezachránil jsi ani ty, kdo prosili. Když přišli vojáci rady, našli jen popel — a v něm lékařskou hůl.',
+  endSecret:
+    'U hranice ležel deník. Poslední věta zněla: „Rada mě poslala město vypálit. Já jsem se rozhodl ho vyléčit.“',
   shopTitle: 'Lékárna',
   coins: 'Groše: {n} ₰',
   coinsEarned: 'Rada ti vyplatila {n} ₰ (přeživší, relikvie, hnízda).',
@@ -356,9 +489,6 @@ const cs: Record<Key, string> = {
   stats: 'Uhlíky {f}/{ft} · Relikvie {c}/{ct} · Čas {time} · Smrti {d}',
   next: 'Dál',
   replay: 'Znovu',
-  victoryTitle: 'Mor vyhořel',
-  victoryStory:
-    'Lékař nesl pochodeň ulicemi, katakombami, morovými jámami i katedrálou. Když vzplála velká hranice, zvony utichly. Ráno stoupal dým nad městem, které přežije. Jeho jméno si nikdo nezapamatoval.',
   victoryStats: 'Uhlíky {f}/{ft} · Relikvie {c}/{ct} · Smrti {d}',
   comingSoon: 'Děkujeme, že jsi hrál Miasmu.',
   toMenu: 'Hlavní menu',

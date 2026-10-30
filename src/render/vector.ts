@@ -280,23 +280,23 @@ function spark(): Texture {
 
 /** Relikvia: malý strieborno-zlatý krížik, slabo žiari. */
 function crystal(): Texture {
-  return paint(9, 11, (ctx) => {
+  // Strana denníka: zvinutý list papiera s červenou pečaťou.
+  return paint(10, 11, (ctx) => {
     ctx.shadowColor = '#f4e2a8';
-    ctx.shadowBlur = 10;
-    const g = ctx.createLinearGradient(0, 0, 9, 11);
-    g.addColorStop(0, '#fffbe8');
-    g.addColorStop(0.5, '#f0d890');
-    g.addColorStop(1, '#a88a40');
-    ctx.fillStyle = g;
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = '#e8dcbc';
     ctx.beginPath();
-    ctx.roundRect(3.6, 0.6, 1.8, 9.8, 0.5);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.roundRect(1, 2.8, 7, 1.8, 0.5);
+    ctx.moveTo(1.4, 1);
+    ctx.lineTo(8.2, 0.6);
+    ctx.quadraticCurveTo(7.4, 5.5, 8.6, 10.2);
+    ctx.lineTo(1.8, 10.4);
+    ctx.quadraticCurveTo(0.8, 5.6, 1.4, 1);
     ctx.fill();
     ctx.shadowBlur = 0;
-    ctx.fillStyle = '#7a2a20';
-    circle(ctx, 4.5, 3.7, 0.7);
+    ctx.strokeStyle = '#4a3a2a';
+    for (let y = 2.6; y < 9; y += 1.4) line(ctx, 2.6, y, 6.8, y - 0.1, 0.35);
+    ctx.fillStyle = '#a8241a';
+    circle(ctx, 6.6, 8.6, 1.3);
   });
 }
 
