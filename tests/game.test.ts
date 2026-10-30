@@ -718,6 +718,18 @@ describe('nové svety', () => {
     expect(game.player.x).toBeGreaterThan(11 * TILE);
   });
 
+  it('po smrti sa vrátia uhlíky zobraté od poslednej kaplnky', () => {
+    const game = make([' P  f  L  f     ^^   E', '######################']);
+    let died = false;
+    for (let t = 0; t < 6 && !died; t += DT)
+      died = game.step(DT, { ...NO_INPUT, right: true }).some((e) => e.type === 'died');
+    expect(died).toBe(true);
+    run(game, 1.5);
+    // Prvý uhlík bol pred kaplnkou (ostane zobratý), druhý za ňou sa vrátil.
+    expect(game.fireflies[0]!.taken).toBe(true);
+    expect(game.fireflies[1]!.taken).toBe(false);
+  });
+
   it('mimo cintorína nefúka', () => {
     const game = make(FLAT);
     run(game, 6);

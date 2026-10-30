@@ -462,6 +462,8 @@ export class Game {
   /** Tabuľa, pri ktorej hráč stojí (rada na obrazovke). */
   sign: Sign | null = null;
   private checkpoint: Point;
+  /** Uhlíky zobraté od poslednej kaplnky: po smrti sa vrátia, aby sa dalo dôjsť ďalej. */
+  private embersSinceCheckpoint: Pickup[] = [];
   private coyote = 0;
   private jumpBuffer = 0;
   private jumpHeld = false;
@@ -1699,6 +1701,7 @@ export class Game {
     for (const f of this.fireflies) {
       if (f.taken || !near(f, 13)) continue;
       f.taken = true;
+      this.embersSinceCheckpoint.push(f);
       this.oil = Math.min(OIL_MAX, this.oil + FIREFLY_OIL);
       this.events.push({ type: 'firefly', x: f.x, y: f.y });
     }
@@ -1730,6 +1733,7 @@ export class Game {
       if (l.lit || Math.abs(l.x - c.x) > 12 || Math.abs(l.y + 10 - c.y) > 22) continue;
       l.lit = true;
       this.checkpoint = { x: l.x, y: l.y };
+      this.embersSinceCheckpoint = [];
       this.oil = OIL_MAX;
       this.events.push({ type: 'lantern', x: l.x, y: l.y });
     }
@@ -1767,6 +1771,8 @@ export class Game {
   }
 
   private respawn(): void {
+    for (const f of this.embersSinceCheckpoint) f.taken = false;
+    this.embersSinceCheckpoint = [];
     this.state = 'play';
     this.placePlayer(this.checkpoint);
     this.oil = OIL_MAX;
