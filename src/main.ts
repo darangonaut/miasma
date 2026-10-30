@@ -273,6 +273,7 @@ const DEATHS: Record<string, Key> = {
   shade: 'diedShade',
   ghoul: 'diedGhoul',
   miasma: 'diedMiasma',
+  rats: 'diedRats',
 };
 
 function finishLevel(g: Game): void {

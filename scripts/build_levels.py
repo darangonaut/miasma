@@ -135,17 +135,17 @@ levels.append(('catacombs', 'catacombs-1', 'level5', ['hintSewage', 'hintSlick',
 # 6 — Roje
 f = L(116)
 f.ceiling(0, 115)
-f.ground(0, 18); f.put(1, 11, 'P'); f.put(5, 11, '1'); f.many([(12, 9), (16, 8)], 'm'); f.put(9, 11, 'f')
+f.ground(0, 18); f.put(1, 11, 'P'); f.put(5, 11, '1'); f.many([(12, 9), (16, 8)], 'r'); f.put(9, 11, 'f')
 f.water(19, 22)
-f.ground(23, 42); f.many([(29, 9), (35, 8)], 'm'); f.put(39, 10, 'L'); f.put(32, 11, 'g'); f.put(26, 11, 'f')
+f.ground(23, 42); f.many([(29, 9), (35, 8)], 'r'); f.put(39, 10, 'L'); f.put(32, 11, 'g'); f.put(26, 11, 'f')
 f.ground(43, 46, top=10); f.ground(47, 50, top=8)
 f.water(51, 62); f.plat(52, 53, 9, 'c'); f.plat(56, 57, 9, 'c'); f.plat(60, 61, 9, 'c')
-f.many([(54, 6), (58, 5)], 'm'); f.many([(52, 8), (60, 8)], 'f')
+f.many([(54, 6), (58, 5)], 'r'); f.many([(52, 8), (60, 8)], 'f')
 f.ground(63, 80, top=9); f.put(66, 8, 'L'); f.put(73, 8, 'g'); f.put(77, 4, 's')
 f.water(81, 86); f.plat(83, 84, 10, 'i')
-f.ground(87, 115); f.many([(92, 9), (97, 7)], 'm'); f.put(101, 6, 's'); f.put(104, 11, 'g')
+f.ground(87, 115); f.many([(92, 9), (97, 7)], 'r'); f.put(101, 6, 's'); f.put(104, 11, 'g')
 f.plat(94, 96, 9); f.put(95, 8, '*'); f.put(99, 11, 'f'); f.put(111, 11, 'E')
-levels.append(('catacombs', 'catacombs-2', 'level6', ['hintFlies'], f))
+levels.append(('catacombs', 'catacombs-2', 'level6', ['hintRats'], f))
 
 # 7 — Stoky
 g = L(118)
@@ -153,13 +153,13 @@ g.ceiling(0, 117)
 g.water(13, 96)
 g.ground(0, 12); g.put(1, 11, 'P'); g.put(9, 11, 'f')
 g.plat(13, 15, 11, 'c'); g.ground(16, 20, top=11); g.plat(16, 20, 11, 'i'); g.put(18, 10, 'f')
-g.plat(23, 24, 11, 'c'); g.ground(27, 33, top=10); g.put(30, 9, 'L'); g.put(32, 6, 'm')
+g.plat(23, 24, 11, 'c'); g.ground(27, 33, top=10); g.put(30, 9, 'L'); g.put(32, 6, 'r')
 g.plat(36, 37, 10, 'c'); g.plat(40, 41, 9, 'c'); g.plat(44, 45, 9, 'c'); g.put(42, 4, 's')
 g.many([(40, 8), (44, 8)], 'f')
 g.ground(48, 56, top=9); g.plat(48, 56, 9, 'i'); g.put(52, 8, 'g')
 g.ground(48, 56, top=3, bottom=5); g.many([(49, 6), (51, 6), (53, 6), (55, 6)], 'v')
 g.plat(59, 60, 10, 'c'); g.plat(63, 64, 10, 'c')
-g.ground(67, 74, top=10); g.put(70, 9, 'L'); g.many([(72, 6), (66, 7)], 'm')
+g.ground(67, 74, top=10); g.put(70, 9, 'L'); g.many([(72, 6), (66, 7)], 'r')
 g.plat(77, 78, 10, 'c'); g.plat(81, 82, 9, 'c'); g.plat(83, 85, 6); g.put(84, 5, '*')
 g.plat(85, 86, 9, 'c'); g.plat(89, 90, 10, 'c'); g.put(88, 5, 's')
 g.ground(93, 96, top=11); g.put(94, 10, 'f')
@@ -169,19 +169,19 @@ levels.append(('catacombs', 'catacombs-3', 'level7', [], g))
 # 8 — Morový prameň
 h = L(126)
 h.ceiling(0, 125)
-h.ground(0, 16); h.put(1, 11, 'P'); h.put(10, 9, 'm'); h.put(7, 11, 'f')
+h.ground(0, 16); h.put(1, 11, 'P'); h.put(10, 9, 'r'); h.put(7, 11, 'f')
 h.water(17, 20)
 h.ground(21, 38); h.plat(26, 27, 11, '^'); h.put(31, 6, 's'); h.put(35, 11, 'g'); h.put(23, 11, 'f')
 h.water(39, 49); h.plat(40, 41, 10, 'c'); h.plat(43, 44, 8, 'c'); h.plat(46, 47, 6, 'c')
 h.many([(40, 9), (46, 5)], 'f')
 h.ceiling(46, 62, 0)
-h.ground(50, 62, top=6); h.put(53, 5, 'L'); h.many([(57, 3), (60, 4)], 'm')
+h.ground(50, 62, top=6); h.put(53, 5, 'L'); h.many([(57, 3), (60, 4)], 'r')
 h.water(63, 74); h.plat(63, 70, 9, 'i'); h.plat(71, 74, 9, 'c'); h.put(67, 8, 'f')
 h.ground(75, 96); h.ground(78, 90, top=5, bottom=7)
 h.many([(79, 8), (81, 8), (83, 8), (85, 8), (87, 8), (89, 8)], 'v'); h.put(84, 11, 'g')
 h.put(93, 10, 'L'); h.plat(91, 92, 11, '^')
 h.water(97, 102); h.plat(99, 100, 11, 'c')
-h.ground(103, 125); h.many([(108, 9), (112, 8)], 'm'); h.put(115, 6, 's'); h.put(110, 11, 'g')
+h.ground(103, 125); h.many([(108, 9), (112, 8)], 'r'); h.put(115, 6, 's'); h.put(110, 11, 'g')
 h.plat(105, 107, 9); h.put(106, 8, '*'); h.put(120, 11, 'E')
 levels.append(('catacombs', 'catacombs-4', 'level8', [], h))
 
@@ -269,13 +269,13 @@ levels.append(('cathedral', 'cathedral-1', 'level13', ['hintMover'], i))
 
 # 14 — Zvonica
 j = L(120)
-j.ground(0, 16); j.put(1, 11, 'P'); j.put(8, 11, 'f'); j.put(12, 9, 'm')
+j.ground(0, 16); j.put(1, 11, 'P'); j.put(8, 11, 'f'); j.put(12, 9, 'r')
 j.put(17, 12, 'V')
 j.ground(19, 26, top=8); j.put(21, 7, 'L'); j.put(25, 4, 's')
 j.put(27, 8, 'H'); j.put(34, 8, 'H'); j.many([(30, 5), (37, 5)], 'f')
-j.ground(40, 46, top=8); j.put(44, 4, 'm')
+j.ground(40, 46, top=8); j.put(44, 4, 'r')
 j.put(47, 12, 'V')
-j.ground(49, 64); j.put(55, 6, 'S'); j.put(52, 9, 'm'); j.put(58, 11, 'g'); j.put(61, 10, 'L'); j.plat(63, 64, 11, '^')
+j.ground(49, 64); j.put(55, 6, 'S'); j.put(52, 9, 'r'); j.put(58, 11, 'g'); j.put(61, 10, 'L'); j.plat(63, 64, 11, '^')
 j.plat(66, 67, 11, 'c'); j.plat(70, 71, 11, 'c')
 j.ground(73, 84); j.put(79, 11, 'g'); j.put(76, 11, 'f')
 j.put(85, 12, 'V'); j.put(87, 8, 'H'); j.put(90, 5, 'f')
@@ -291,7 +291,7 @@ k.put(13, 12, 'V')
 k.ground(15, 22, top=8); k.put(20, 4, 's'); k.put(18, 7, 'f')
 k.plat(23, 24, 8, 'c'); k.plat(27, 28, 8, 'c'); k.many([(23, 7)], 'f')
 k.ground(30, 35, top=8); k.put(32, 7, 'L')
-k.put(36, 8, 'H'); k.put(43, 8, 'H'); k.put(50, 8, 'H'); k.many([(39, 5), (53, 5)], 'f'); k.put(47, 2, 'm')
+k.put(36, 8, 'H'); k.put(43, 8, 'H'); k.put(50, 8, 'H'); k.many([(39, 5), (53, 5)], 'f'); k.put(47, 2, 'r')
 k.ground(56, 62, top=8); k.plat(59, 60, 7, '^')
 k.put(63, 12, 'V')
 k.ground(65, 82); k.ground(66, 80, top=5, bottom=7)
@@ -314,13 +314,13 @@ q.ground(31, 40, top=8); q.put(34, 7, 'L'); q.put(38, 7, 'g')
 q.plat(41, 42, 8, 'c'); q.plat(45, 46, 8, 'c'); q.many([(41, 7), (45, 7)], 'f')
 q.ground(48, 54, top=8); q.put(51, 3, 'S')
 q.plat(56, 58, 10, 'c')
-q.ground(60, 76); q.plat(64, 65, 11, '^'); q.many([(68, 9), (71, 8)], 'm'); q.put(73, 10, 'L'); q.plat(76, 76, 12, 'b')
+q.ground(60, 76); q.plat(64, 65, 11, '^'); q.many([(68, 9), (71, 8)], 'r'); q.put(73, 10, 'L'); q.plat(76, 76, 12, 'b')
 q.ground(79, 86, top=7); q.put(83, 2, 'S'); q.put(81, 6, 'f')
 q.put(87, 7, 'H')
 q.ground(93, 100, top=7); q.put(96, 6, 'L')
 q.ground(101, 139); q.plat(104, 110, 12, 'i'); q.ground(112, 124, top=5, bottom=7)
 q.many([(113, 8), (116, 8), (119, 8), (122, 8)], 'v'); q.put(108, 6, 'S'); q.put(118, 11, 'g'); q.put(127, 6, 's')
-q.put(126, 7, 'm'); q.plat(128, 130, 9, '-'); q.put(129, 8, '*'); q.put(106, 11, 'f'); q.put(135, 11, 'E')
+q.put(126, 7, 'r'); q.plat(128, 130, 9, '-'); q.put(129, 8, '*'); q.put(106, 11, 'f'); q.put(135, 11, 'E')
 levels.append(('cathedral', 'cathedral-4', 'level16', [], q))
 
 
@@ -331,13 +331,13 @@ levels.append(('cathedral', 'cathedral-4', 'level16', [], q))
 
 WORLD_BLOCKS = {
     'quarter': ['pit', 'spikes', 'step', 'planks', 'ghouls', 'bounce', 'ledges', 'wraiths',
-                'barricade', 'sneak'],
-    'catacombs': ['water', 'spikes', 'planks', 'ghouls', 'debris', 'slick', 'flies', 'ledges',
+                'barricade', 'sneak', 'rats'],
+    'catacombs': ['water', 'spikes', 'planks', 'ghouls', 'debris', 'slick', 'rats', 'ledges',
                   'wraiths', 'barricade', 'fog', 'fog'],
     'pits': ['pit', 'water', 'spikes', 'planks', 'ghouls', 'bounce', 'step', 'wraiths', 'great',
-             'fog', 'barricade'],
+             'fog', 'barricade', 'rats'],
     'cathedral': ['movers', 'lift', 'debris', 'ghouls', 'planks', 'ledges', 'spikes', 'great',
-                  'pit', 'barricade', 'fog', 'sneak'],
+                  'pit', 'barricade', 'fog', 'sneak', 'rats'],
 }
 
 # Nové prvky Miasmy sa predstavia s tabuľou na začiatku druhej polovice levelu.
@@ -473,12 +473,13 @@ class Gen:
             s.flat(n)
             s.lv.plat(x0, x0 + n - 1, s.y, 'i')
             s.flat(2)
-        elif kind == 'flies':
+        elif kind == 'rats':
+            # Kŕdeľ potkanov: kým svietiš, držia sa na okraji svetla.
             x0 = s.x
             s.flat(8)
-            s.put(x0 + 3, s.y - 3, 'm')
+            s.put(x0 + 4, s.y - 1, 'r')
             if d >= 7:
-                s.put(x0 + 6, s.y - 4, 'm')
+                s.put(x0 + 7, s.y - 1, 'r')
         elif kind == 'wraiths':
             x0 = s.x
             s.flat(9)

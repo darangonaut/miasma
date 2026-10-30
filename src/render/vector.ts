@@ -217,34 +217,35 @@ function ghoulEyes(): Texture {
   });
 }
 
-/** Roj múch: tri muchy s priesvitnými krídlami. */
-function moth(frame: number): Texture {
-  return paint(9, 7, (ctx) => {
-    const up = frame === 0;
-    for (const [x, y, s] of [
-      [2.6, 2.6, 0.9],
-      [6.2, 2, 0.75],
-      [4.6, 5, 0.8],
-    ] as const) {
-      ctx.fillStyle = 'rgba(190,196,200,0.55)';
-      for (const side of [-1, 1]) {
-        ctx.beginPath();
-        ctx.ellipse(
-          x + side * 0.9 * s,
-          y - (up ? 0.9 : 0.3) * s,
-          0.9 * s,
-          (up ? 0.6 : 0.4) * s,
-          side * (up ? 0.7 : 0.2),
-          0,
-          Math.PI * 2,
-        );
-        ctx.fill();
-      }
-      ctx.fillStyle = INK_CSS;
-      ctx.beginPath();
-      ctx.ellipse(x, y, 0.55 * s, 0.85 * s, 0, 0, Math.PI * 2);
-      ctx.fill();
-    }
+/** Potkan: nízke telo, dlhý chvost a lysé uši; 2 snímky behu. Labky na y = 5. */
+function rat(frame: number): Texture {
+  return paint(12, 6, (ctx) => {
+    ctx.fillStyle = INK_CSS;
+    ctx.strokeStyle = INK_CSS;
+    const k = frame === 0 ? 1 : -1;
+    // Chvost.
+    ctx.lineWidth = 0.4;
+    ctx.beginPath();
+    ctx.moveTo(3.2, 3.6);
+    ctx.quadraticCurveTo(1.4, 2.6 + k * 0.5, 0.3, 4.4);
+    ctx.stroke();
+    // Telo a hlava s ňufákom.
+    ctx.beginPath();
+    ctx.ellipse(5.6, 3.4, 2.7, 1.35, -0.05, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(7.4, 2.4);
+    ctx.quadraticCurveTo(9.2, 2.6, 10.6, 3.6);
+    ctx.quadraticCurveTo(9, 4.3, 7.4, 4.3);
+    ctx.closePath();
+    ctx.fill();
+    circle(ctx, 8, 2.2, 0.6);
+    // Labky.
+    line(ctx, 4.2, 4.2, 4.2 - k * 0.6, 5, 0.45);
+    line(ctx, 7, 4.2, 7 + k * 0.6, 5, 0.45);
+    // Oko sa leskne vo svetle.
+    ctx.fillStyle = '#ff6040';
+    circle(ctx, 9.1, 3.1, 0.22);
   });
 }
 
@@ -1282,7 +1283,7 @@ export const vectorArt: Art = {
   campfire,
   sign,
   lightTile,
-  moth,
+  rat,
   spark,
   water,
   crumble,

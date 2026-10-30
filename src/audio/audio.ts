@@ -226,8 +226,12 @@ export class Sound {
           this.sweep(180, 60, 'square', 0.1, 0.12);
           this.sweep(500, 900, 'square', 0.05, 0.1);
           break;
-        case 'mothDie':
-          this.sweep(1200, 400, 'triangle', 0.06, 0.2);
+        case 'ratDie':
+          this.sweep(2400, 900, 'square', 0.04, 0.15);
+          break;
+        case 'squeak':
+          this.sweep(2600, 3400, 'square', 0.025, 0.07);
+          this.sweep(3000, 2200, 'square', 0.02, 0.06);
           break;
         case 'fizzle':
           this.noise(0.12, 4000, 0.04, 'highpass');

@@ -31,7 +31,7 @@ export interface Art {
   campfire(): Texture;
   sign(): Texture;
   lightTile(): Texture;
-  moth(frame: number): Texture;
+  rat(frame: number): Texture;
   spark(): Texture;
   water(frame: number, world: World): Texture;
   bounce(squash: boolean): Texture;

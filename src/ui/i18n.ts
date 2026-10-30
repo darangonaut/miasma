@@ -16,7 +16,7 @@ const en = {
   level4: 'Gallows Square',
   world2: 'Catacombs',
   level5: 'Ossuary',
-  level6: 'Swarms',
+  level6: 'Rat Nests',
   level7: 'The Sewers',
   level8: 'Plague Spring',
   world3: 'Plague Pits',
@@ -37,22 +37,23 @@ const en = {
   hintShrine: 'Light the candle in a shrine. It saves your progress and refills the torch.',
   hintSpikes: 'Iron spikes. One mistake is enough.',
   hintGhoul:
-    'The infected see your fire and come for you. One touch kills. Jump on their heads, throw a spark (C) or flare the torch (Shift).',
+    'Your fire gives you away: the bigger the flame, the farther the infected see you. One touch kills. Jump on their heads, throw a spark (C) or flare the torch (Shift).',
   hintGhoulTouch:
-    'The infected see your fire and come for you. One touch kills. Jump on their heads, throw a spark ✸ or flare the torch ✦.',
+    'Your fire gives you away: the bigger the flame, the farther the infected see you. One touch kills. Jump on their heads, throw a spark ✸ or flare the torch ✦.',
   hintExit: 'At the end of every path, light the pyre. Fire purifies.',
   hintAwning: 'Stretched canvas throws you high. Hold jump to float further.',
   hintPlanks: 'Rotten planks give way beneath you. Don’t stop.',
   hintWraith:
     'Plague wraiths circle the edge of your light. Before they strike, they freeze and their eyes turn red — that is your moment.',
   hintFlare:
-    'Hold Shift or X: the torch flares up and burns everything close. It eats pitch quickly.',
-  hintFlareTouch: 'Hold ✦: the torch flares up and burns everything close. It eats pitch quickly.',
+    'Hold Shift or X: the torch flares up and burns everything close — but every infected far around sees it and comes. A spark that dies out lures them too.',
+  hintFlareTouch:
+    'Hold ✦: the torch flares up and burns everything close — but every infected far around sees it and comes. A spark that dies out lures them too.',
   hintSewage: 'The sewage is deep and foul. Don’t fall in.',
   hintSlick: 'Slimy stones. You slide and stop only slowly.',
   hintDebris: 'Loose masonry falls when you pass beneath. Keep moving.',
-  hintFlies: 'Swarms of flies smother your torch. Burn them with a flare or a spark (C).',
-  hintFliesTouch: 'Swarms of flies smother your torch. Burn them with a flare ✦ or a spark ✸.',
+  hintRats:
+    'Rats fear the light and keep to its edge. Hide the torch or run out of pitch and they tear you apart. A flared torch burns them.',
   hintWind:
     'The wind blows in gusts and pushes you in mid-air. Jump when it dies down — standing still, it can’t move you.',
   hintShelter:
@@ -70,6 +71,7 @@ const en = {
   hintMiasma:
     'Green miasma infects you. Get through quickly or burn it away with a flared torch. Healing herbs cure the infection.',
   diedMiasma: 'The miasma choked you…',
+  diedRats: 'The rats ate you alive…',
   oilLow: 'The torch is dying!',
   diedThorns: 'Impaled…',
   diedFall: 'Fell into the dark…',
@@ -115,7 +117,7 @@ const sk: Record<Key, string> = {
   level4: 'Šibeničné námestie',
   world2: 'Katakomby',
   level5: 'Kostnica',
-  level6: 'Roje',
+  level6: 'Hniezda potkanov',
   level7: 'Stoky',
   level8: 'Morový prameň',
   world3: 'Morové jamy',
@@ -136,21 +138,23 @@ const sk: Record<Key, string> = {
   hintShrine: 'Zapáľ sviecu v kaplnke. Uloží postup a doplní fakľu.',
   hintSpikes: 'Železné hroty. Stačí jedna chyba.',
   hintGhoul:
-    'Nakazení vidia tvoj oheň a idú po tebe. Jeden dotyk zabije. Skoč im na hlavu, hoď iskru (C) alebo rozžiar fakľu (Shift).',
+    'Oheň ťa prezrádza: čím väčší plameň, tým zďaleka ťa nakazení vidia. Dotyk zabije. Skoč im na hlavu, hoď iskru (C) alebo rozžiar fakľu (Shift).',
   hintGhoulTouch:
-    'Nakazení vidia tvoj oheň a idú po tebe. Jeden dotyk zabije. Skoč im na hlavu, hoď iskru ✸ alebo rozžiar fakľu ✦.',
+    'Oheň ťa prezrádza: čím väčší plameň, tým zďaleka ťa nakazení vidia. Dotyk zabije. Skoč im na hlavu, hoď iskru ✸ alebo rozžiar fakľu ✦.',
   hintExit: 'Na konci každej cesty zapáľ hranicu. Oheň očisťuje.',
   hintAwning: 'Napnutá plachta ťa vymrští vysoko. Podrž skok a doletíš ďalej.',
   hintPlanks: 'Zhnité dosky sa pod tebou prelomia. Nezastavuj.',
   hintWraith:
     'Morové prízraky krúžia na okraji svetla. Pred útokom strnú a oči im sčervenajú — vtedy konaj.',
-  hintFlare: 'Podrž Shift alebo X: fakľa vzbĺkne a spáli všetko blízko. Rýchlo míňa smolu.',
-  hintFlareTouch: 'Podrž ✦: fakľa vzbĺkne a spáli všetko blízko. Rýchlo míňa smolu.',
+  hintFlare:
+    'Podrž Shift alebo X: fakľa vzbĺkne a spáli všetko blízko — no uvidí ju každý nakazený široko-ďaleko a príde. Priláka ich aj iskra, ktorá zhasne.',
+  hintFlareTouch:
+    'Podrž ✦: fakľa vzbĺkne a spáli všetko blízko — no uvidí ju každý nakazený široko-ďaleko a príde. Priláka ich aj iskra, ktorá zhasne.',
   hintSewage: 'Žumpa je hlboká a smrdí smrťou. Nespadni do nej.',
   hintSlick: 'Slizké kamene. Kĺžeš sa a zastavíš len pomaly.',
   hintDebris: 'Uvoľnené murivo spadne, keď prechádzaš pod ním. Nezastavuj.',
-  hintFlies: 'Roje múch dusia fakľu. Spáľ ich rozžiarením alebo iskrou (C).',
-  hintFliesTouch: 'Roje múch dusia fakľu. Spáľ ich rozžiarením ✦ alebo iskrou ✸.',
+  hintRats:
+    'Potkany sa boja svetla a držia sa na jeho okraji. Keď fakľu ukryješ alebo ti dôjde smola, roztrhajú ťa. Rozžiarená fakľa ich spáli.',
   hintWind:
     'Vietor fúka v nárazoch a vo vzduchu ťa odfúkne. Skáč, keď utíchne — kým stojíš, nepohne s tebou.',
   hintShelter: 'Za náhrobkom alebo skalou si v závetrí. Keď vietor začne kvíliť, prichádza náraz.',
@@ -167,6 +171,7 @@ const sk: Record<Key, string> = {
   hintMiasma:
     'Zelená miazma ťa nakazí. Prejdi rýchlo alebo ju spáľ rozžiarenou fakľou. Liečivé byliny nákazu vyliečia.',
   diedMiasma: 'Udusila ťa miazma…',
+  diedRats: 'Zožrali ťa potkany…',
   oilLow: 'Fakľa dohára!',
   diedThorns: 'Nabodnutý…',
   diedFall: 'Pád do tmy…',
@@ -210,7 +215,7 @@ const cs: Record<Key, string> = {
   level4: 'Šibeniční náměstí',
   world2: 'Katakomby',
   level5: 'Kostnice',
-  level6: 'Roje',
+  level6: 'Krysí hnízda',
   level7: 'Stoky',
   level8: 'Morový pramen',
   world3: 'Morové jámy',
@@ -231,21 +236,23 @@ const cs: Record<Key, string> = {
   hintShrine: 'Zapal svíci v kapličce. Uloží postup a doplní pochodeň.',
   hintSpikes: 'Železné hroty. Stačí jedna chyba.',
   hintGhoul:
-    'Nakažení vidí tvůj oheň a jdou po tobě. Jeden dotek zabije. Skoč jim na hlavu, hoď jiskru (C) nebo rozzař pochodeň (Shift).',
+    'Oheň tě prozrazuje: čím větší plamen, tím zdálky tě nakažení vidí. Dotek zabíjí. Skoč jim na hlavu, hoď jiskru (C) nebo rozzař pochodeň (Shift).',
   hintGhoulTouch:
-    'Nakažení vidí tvůj oheň a jdou po tobě. Jeden dotek zabije. Skoč jim na hlavu, hoď jiskru ✸ nebo rozzař pochodeň ✦.',
+    'Oheň tě prozrazuje: čím větší plamen, tím zdálky tě nakažení vidí. Dotek zabíjí. Skoč jim na hlavu, hoď jiskru ✸ nebo rozzař pochodeň ✦.',
   hintExit: 'Na konci každé cesty zapal hranici. Oheň očišťuje.',
   hintAwning: 'Napnutá plachta tě vymrští vysoko. Podrž skok a doletíš dál.',
   hintPlanks: 'Shnilá prkna se pod tebou prolomí. Nezastavuj.',
   hintWraith:
     'Morové přízraky krouží na okraji světla. Před útokem strnou a oči jim zrudnou — tehdy jednej.',
-  hintFlare: 'Podrž Shift nebo X: pochodeň vzplane a spálí vše blízko. Rychle spotřebuje smůlu.',
-  hintFlareTouch: 'Podrž ✦: pochodeň vzplane a spálí vše blízko. Rychle spotřebuje smůlu.',
+  hintFlare:
+    'Podrž Shift nebo X: pochodeň vzplane a spálí vše blízko — ale uvidí ji každý nakažený široko daleko a přijde. Přiláká je i jiskra, která zhasne.',
+  hintFlareTouch:
+    'Podrž ✦: pochodeň vzplane a spálí vše blízko — ale uvidí ji každý nakažený široko daleko a přijde. Přiláká je i jiskra, která zhasne.',
   hintSewage: 'Žumpa je hluboká a páchne smrtí. Nespadni do ní.',
   hintSlick: 'Slizké kameny. Kloužeš a zastavíš jen pomalu.',
   hintDebris: 'Uvolněné zdivo spadne, když pod ním procházíš. Nezastavuj.',
-  hintFlies: 'Roje much dusí pochodeň. Spal je rozzářením nebo jiskrou (C).',
-  hintFliesTouch: 'Roje much dusí pochodeň. Spal je rozzářením ✦ nebo jiskrou ✸.',
+  hintRats:
+    'Krysy se bojí světla a drží se na jeho okraji. Když pochodeň schováš nebo ti dojde smůla, roztrhají tě. Rozzářená pochodeň je spálí.',
   hintWind:
     'Vítr fouká v nárazech a ve vzduchu tě odfoukne. Skákej, když utichne — dokud stojíš, nepohne s tebou.',
   hintShelter: 'Za náhrobkem nebo skálou jsi v závětří. Když vítr začne kvílet, přichází náraz.',
@@ -262,6 +269,7 @@ const cs: Record<Key, string> = {
   hintMiasma:
     'Zelená miazma tě nakazí. Projdi rychle nebo ji spal rozzářenou pochodní. Léčivé byliny nákazu vyléčí.',
   diedMiasma: 'Udusila tě miazma…',
+  diedRats: 'Sežraly tě krysy…',
   oilLow: 'Pochodeň dohořívá!',
   diedThorns: 'Nabodnutý…',
   diedFall: 'Pád do tmy…',

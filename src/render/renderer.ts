@@ -97,7 +97,7 @@ export class Renderer {
     stone: Texture.EMPTY,
     snow: Texture.EMPTY,
     rain: Texture.EMPTY,
-    moth: [] as Texture[],
+    rat: [] as Texture[],
     sparkBall: Texture.EMPTY,
     water: [] as Texture[],
     crumble: Texture.EMPTY,
@@ -113,7 +113,7 @@ export class Renderer {
   private backs = new Map<World, { sky: Texture; far: Texture; near: Texture; water: Texture[] }>();
   private ambient: WorldInfo['ambient'] = 'motes';
   private darkness = 0.6;
-  private mothSprites: Sprite[] = [];
+  private ratSprites: Sprite[] = [];
   private sparkSprites: Sprite[] = [];
   private crumbleSprites: { sprite: Sprite; col: number; row: number }[] = [];
   private barricadeSprites: { sprite: Sprite; fire: Sprite }[] = [];
@@ -189,7 +189,7 @@ export class Renderer {
     this.tex.lantern = [art.lantern(false), art.lantern(true)];
     this.tex.flame = [0, 1, 2].map((v) => art.flame(v));
     this.tex.lightTile = art.lightTile();
-    this.tex.moth = [0, 1].map((f) => art.moth(f));
+    this.tex.rat = [0, 1].map((f) => art.rat(f));
     this.tex.sparkBall = art.spark();
     this.tex.crumble = art.crumble();
     this.tex.barricade = art.barricade();
@@ -388,9 +388,9 @@ export class Renderer {
       this.actors.addChild(sprite);
       return sprite;
     });
-    this.mothSprites = game.moths.map(() => {
-      const s = new Sprite(this.tex.moth[0]);
-      s.anchor.set(0.5);
+    this.ratSprites = game.rats.map(() => {
+      const s = new Sprite(this.tex.rat[0]);
+      s.anchor.set(0.5, 5 / 6);
       this.actors.addChild(s);
       return s;
     });
@@ -489,8 +489,8 @@ export class Renderer {
           for (const dir of [-1, 1])
             this.spawn(this.tex.dust, e.x + dir * 4, e.y + 4, dir * 40, 0, 0, 0.3, false);
           break;
-        case 'mothDie':
-          this.burst(e.x, e.y, 8, 0xe8dcc0, 40, false);
+        case 'ratDie':
+          this.burst(e.x, e.y, 8, C.shadeInner, 40, false);
           this.burst(e.x, e.y, 6, C.flame, 40, true);
           break;
         case 'fizzle':
@@ -732,13 +732,14 @@ export class Renderer {
       f.texture = this.tex.flame[(Math.floor(t * 10) + i) % 3]!;
     });
 
-    game.moths.forEach((m, i) => {
-      const s = this.mothSprites[i]!;
-      s.visible = m.alive;
-      if (!m.alive) return;
-      s.texture = this.tex.moth[Math.floor(m.phase * 0.8) % 2]!;
-      s.position.set(this.px(m.x), this.px(m.y));
-      s.scale.x = m.vx < 0 ? -1 : 1;
+    game.rats.forEach((r, i) => {
+      const s = this.ratSprites[i]!;
+      s.visible = r.alive;
+      if (!r.alive) return;
+      s.texture = this.tex.rat[Math.floor(r.step / 3) % 2]!;
+      s.position.set(r.x, r.y + 0.5);
+      s.scale.x = r.dir;
+      s.tint = r.burning ? 0xff9a60 : 0xffffff;
     });
     // Iskry: sprity podľa počtu, s iskričkami za sebou.
     while (this.sparkSprites.length < game.sparks.length) {

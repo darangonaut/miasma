@@ -80,8 +80,6 @@ const SPARK_LIFE = 0.8;
 const SPARK_COOLDOWN = 0.35;
 export const SPARK_RADIUS = 34;
 const STOMP_BOUNCE = 210;
-/** Koľko oleja za sekundu vypije jedna mora prisatá k lampášu. */
-export const MOTH_DRAIN = 7;
 const CRUMBLE_DELAY = 0.6;
 /** Skákacia huba vymrští asi o 6 políčok. */
 export const BOUNCE_SPEED = 340;
@@ -158,8 +156,24 @@ export const GHOUL_W = 8;
 export const GHOUL_H = 14;
 const GHOUL_WALK = 16;
 const GHOUL_CHASE = 46;
-/** Ako ďaleko (px) zbadajú fakľu navyše k jej polomeru. */
-const GHOUL_SIGHT = 64;
+/** Svetlo ťa prezrádza: dohľad nakazených rastie s polomerom fakle. */
+const GHOUL_SIGHT = 40;
+const GHOUL_SIGHT_PER_RADIUS = 1.5;
+/** Rozžiarenú fakľu zbadajú nakazení zďaleka (aj z iného poschodia) a prídu sa pozrieť. */
+export const FLARE_CALL = 240;
+/** Iskra, ktorá zhasne, a horiaca barikáda prilákajú nakazených nablízku. */
+export const SPARK_CALL = 120;
+const FIRE_CALL = 110;
+const GHOUL_LURE = 0.7;
+// --- Potkany: boja sa svetla, ale keď fakľa zhasne alebo ju ukryješ, roztrhajú ťa ---
+export const RAT_W = 6;
+export const RAT_H = 4;
+const RAT_RUN = 64;
+const RAT_FLEE = 82;
+const RAT_WANDER = 18;
+const RAT_SIGHT = 150;
+/** Potkany sa držia od plameňa ďalej, než je polomer svetla mínus táto rezerva. */
+export const RAT_DARE = 16;
 const RESPAWN_DELAY = 1.1;
 
 export type GameEvent =
@@ -171,7 +185,8 @@ export type GameEvent =
   | { type: 'flare' }
   | { type: 'hurt' }
   | { type: 'shadeDie'; x: number; y: number }
-  | { type: 'mothDie'; x: number; y: number }
+  | { type: 'ratDie'; x: number; y: number }
+  | { type: 'squeak'; x: number; y: number }
   | { type: 'stomp'; x: number; y: number }
   | { type: 'throw' }
   | { type: 'fizzle'; x: number; y: number }
@@ -196,7 +211,7 @@ export type GameEvent =
   | { type: 'exit' };
 
 export type DeathCause =
-  'thorns' | 'fall' | 'dark' | 'water' | 'icicle' | 'shade' | 'ghoul' | 'miasma';
+  'thorns' | 'fall' | 'dark' | 'water' | 'icicle' | 'shade' | 'ghoul' | 'miasma' | 'rats';
 
 export interface Player {
   /** Ľavý horný roh hitboxu. */
@@ -246,6 +261,24 @@ export interface Ghoul {
   burning: boolean;
   /** Fáza chôdze (pre animáciu). */
   step: number;
+  /** Kam ho priláka svetlo (x) a ako dlho tam ešte bude hľadať. */
+  lure: number;
+  lureTime: number;
+}
+
+/** Potkan: x je stred, y sú labky. */
+export interface Rat {
+  x: number;
+  y: number;
+  home: Point;
+  vx: number;
+  dir: 1 | -1;
+  alive: boolean;
+  hp: number;
+  burning: boolean;
+  /** Uteká pred svetlom (pre animáciu a pišťanie). */
+  fleeing: boolean;
+  step: number;
 }
 
 export interface Icicle {
@@ -265,20 +298,6 @@ export interface Mover {
   axis: 'h' | 'v';
   dx: number;
   dy: number;
-}
-
-/** Mora: letí za svetlom a pije olej z lampáša. */
-export interface Moth {
-  x: number;
-  y: number;
-  home: Point;
-  vx: number;
-  vy: number;
-  alive: boolean;
-  /** Prisatá k lampášu (pije olej). */
-  drinking: boolean;
-  phase: number;
-  hp: number;
 }
 
 export interface Spark {
@@ -335,9 +354,11 @@ export class Game {
   readonly crystals: Pickup[];
   readonly lanterns: Lantern[];
   readonly shades: Shade[];
-  readonly moths: Moth[];
+  readonly rats: Rat[];
   readonly ghouls: Ghoul[];
   readonly sparks: Spark[] = [];
+  /** Miesta, kde zhasli iskry (prilákajú nakazených). */
+  private noises: Point[] = [];
   readonly crumbles: Crumble[] = [];
   private crumbleAt = new Map<number, Crumble>();
   readonly barricades: Barricade[] = [];
@@ -435,17 +456,23 @@ export class Game {
       dx: 0,
       dy: 0,
     }));
-    this.moths = level.moths.map((p) => ({
-      x: p.x,
-      y: p.y,
-      home: { ...p },
-      vx: 0,
-      vy: 0,
-      alive: true,
-      drinking: false,
-      phase: this.rng.next() * Math.PI * 2,
-      hp: 1,
-    }));
+    this.rats = [];
+    for (const p of level.rats) {
+      const feet = this.floorBelow(p);
+      for (const dx of [-5, 0, 5])
+        this.rats.push({
+          x: p.x + dx,
+          y: feet ?? p.y,
+          home: { x: p.x + dx, y: feet ?? p.y },
+          vx: 0,
+          dir: dx < 0 ? -1 : 1,
+          alive: feet !== null,
+          hp: 1,
+          burning: false,
+          fleeing: false,
+          step: this.rng.next() * 10,
+        });
+    }
     this.ghouls = level.ghouls.map((p) => {
       const feet = p.y + TILE / 2;
       return {
@@ -459,6 +486,8 @@ export class Game {
         hp: 1,
         burning: false,
         step: 0,
+        lure: p.x,
+        lureTime: 0,
       };
     });
     this.herbs = level.herbs.map((p) => ({ ...p, taken: false }));
@@ -546,7 +575,7 @@ export class Game {
       this.deadTimer -= dt;
       if (this.deadTimer <= 0) this.respawn();
       this.updateShades(dt);
-      this.updateMoths(dt);
+      this.updateRats(dt);
       this.updateGhouls(dt);
       this.updateSparks(dt);
       this.updateCrumbles(dt);
@@ -566,7 +595,7 @@ export class Game {
     this.throwSpark(dt, input);
     this.updateSparks(dt);
     if (this.state === 'play') this.updateShades(dt);
-    if (this.state === 'play') this.updateMoths(dt);
+    if (this.state === 'play') this.updateRats(dt);
     if (this.state === 'play') this.updateGhouls(dt);
     if (this.state === 'play') this.collect();
     return this.events;
@@ -1027,11 +1056,6 @@ export class Game {
         this.hitShade(s);
         hit = true;
       }
-      for (const m of this.moths) {
-        if (!m.alive || Math.hypot(m.x - sp.x, m.y - sp.y) > 9) continue;
-        this.killMoth(m);
-        hit = true;
-      }
       for (const g of this.ghouls) {
         if (!g.alive || Math.abs(g.x - sp.x) > 6 || sp.y < g.y - GHOUL_H - 2 || sp.y > g.y + 2)
           continue;
@@ -1040,7 +1064,10 @@ export class Game {
       }
       if (blocked || hit || sp.life <= 0) {
         this.sparks.splice(i, 1);
-        if (!hit) this.events.push({ type: 'fizzle', x: sp.x, y: sp.y });
+        if (!hit) {
+          this.events.push({ type: 'fizzle', x: sp.x, y: sp.y });
+          this.noises.push({ x: sp.x, y: sp.y });
+        }
       }
     }
   }
@@ -1062,12 +1089,6 @@ export class Game {
     s.timer = 1.4;
   }
 
-  private killMoth(m: Moth): void {
-    m.alive = false;
-    m.drinking = false;
-    this.events.push({ type: 'mothDie', x: m.x, y: m.y });
-  }
-
   /** Skok na hlavu: padajúci hráč tieň rozplynie a odrazí sa. */
   private tryStomp(s: Shade): boolean {
     const p = this.player;
@@ -1083,43 +1104,79 @@ export class Game {
     return true;
   }
 
-  private updateMoths(dt: number): void {
-    const lamp = this.lamp;
+  /** Potkany: kým svietiš, držia sa na okraji svetla; v tme alebo pri ukrytej fakli zaútočia. */
+  private updateRats(dt: number): void {
+    const p = this.player;
     const alive = this.state === 'play';
-    for (const m of this.moths) {
-      if (!m.alive) continue;
-      m.phase += dt * 9;
-      const dx = lamp.x - m.x;
-      const dy = lamp.y - m.y;
-      const dist = Math.hypot(dx, dy) || 1;
-      const attracted = alive && dist < this.radius * 1.5 + 30;
-      // Rozžiarený lampáš mory spáli.
-      if (alive && this.flaring && dist < this.radius * 0.9) {
-        m.hp -= dt * 4;
-        if (m.hp <= 0) {
-          this.killMoth(m);
+    const pcx = p.x + PLAYER_W / 2;
+    const pFeet = p.y + PLAYER_H;
+    const lamp = this.lamp;
+    const fear = Math.max(0, this.radius - RAT_DARE);
+    for (const r of this.rats) {
+      if (!r.alive) continue;
+      // Rozžiarená fakľa ich spáli.
+      r.burning =
+        alive && this.flaring && Math.hypot(lamp.x - r.x, lamp.y - (r.y - 2)) < this.radius * 0.9;
+      if (r.burning) {
+        r.hp -= dt * 4;
+        if (r.hp <= 0) {
+          this.killRat(r);
           continue;
         }
+      } else r.hp = Math.min(1, r.hp + dt * 0.5);
+      const engaged = alive && Math.abs(pFeet - r.y) < 20 && Math.abs(pcx - r.x) < RAT_SIGHT;
+      const wasFleeing = r.fleeing;
+      r.fleeing = false;
+      let want: number;
+      if (engaged && (this.shielded || this.oil <= 0)) {
+        // Fakľa je ukrytá alebo dohorela: potkany sa vrhnú na hráča.
+        want = Math.sign(pcx - r.x) * RAT_RUN;
+      } else if (engaged) {
+        const fromLamp = Math.abs(lamp.x - r.x);
+        if (fromLamp < fear) {
+          want = Math.sign(r.x - lamp.x || r.dir) * RAT_FLEE;
+          r.fleeing = true;
+        } else if (fromLamp > fear + 5) want = Math.sign(pcx - r.x) * RAT_RUN;
+        else want = Math.sin(this.time * 9 + r.step) * 25;
+      } else {
+        if (Math.abs(r.x - r.home.x) > 22) r.dir = r.x > r.home.x ? -1 : 1;
+        want = r.dir * RAT_WANDER;
       }
-      let tx = m.home.x + Math.sin(m.phase * 0.2) * 10;
-      let ty = m.home.y + Math.cos(m.phase * 0.27) * 6;
-      if (attracted) {
-        // Krúži tesne okolo plameňa.
-        tx = lamp.x + Math.cos(m.phase * 0.5) * 7;
-        ty = lamp.y + Math.sin(m.phase * 0.7) * 5;
-      }
-      const speed = attracted ? 60 : 24;
-      const ddx = tx - m.x;
-      const ddy = ty - m.y;
-      const d = Math.hypot(ddx, ddy) || 1;
-      m.vx += ((ddx / d) * Math.min(speed, d * 4) - m.vx) * Math.min(1, dt * 5);
-      m.vy += ((ddy / d) * Math.min(speed, d * 4) - m.vy) * Math.min(1, dt * 5);
-      // Trepotanie krídel.
-      m.x += m.vx * dt + Math.sin(m.phase * 1.7) * 0.4;
-      m.y += m.vy * dt + Math.cos(m.phase * 2.3) * 0.4;
-      m.drinking = alive && dist < 14;
-      if (m.drinking) this.oil = Math.max(0, this.oil - MOTH_DRAIN * dt);
+      if (r.fleeing && !wasFleeing && this.rng.next() < 0.3)
+        this.events.push({ type: 'squeak', x: r.x, y: r.y });
+      if (want !== 0) r.dir = want > 0 ? 1 : -1;
+      r.vx = approach(r.vx, want, 600 * dt);
+      const nx = r.x + r.vx * dt;
+      if (this.walkerBlocked(nx, r.y, Math.sign(r.vx), RAT_W, RAT_H)) {
+        r.vx = 0;
+        if (!engaged) r.dir = r.dir > 0 ? -1 : 1;
+      } else r.x = nx;
+      r.step += Math.abs(r.vx) * dt;
+      // Uhryznutie: len keď stojíš pri nich na zemi (preskočiť sa dajú).
+      if (
+        alive &&
+        Math.abs(r.x - pcx) < (RAT_W + PLAYER_W) / 2 - 1 &&
+        pFeet > r.y - RAT_H &&
+        pFeet < r.y + 3
+      )
+        this.die('rats');
     }
+  }
+
+  private killRat(r: Rat): void {
+    r.alive = false;
+    this.events.push({ type: 'ratDie', x: r.x, y: r.y - 2 });
+  }
+
+  /** Prvá pevná plocha pod bodom (y chodidiel), alebo null nad priepasťou. */
+  private floorBelow(pt: Point): number | null {
+    const col = Math.floor(pt.x / TILE);
+    for (let row = Math.floor(pt.y / TILE); row < this.level.height; row++) {
+      const t = tileAt(this.level, col, row + 1);
+      if (isGround(t) || t === Tile.Ledge || t === Tile.Crumble) return (row + 1) * TILE;
+      if (t === Tile.Water || t === Tile.Thorns) return null;
+    }
+    return null;
   }
 
   private updateShades(dt: number): void {
@@ -1222,16 +1279,33 @@ export class Game {
     const alive = this.state === 'play';
     const pcx = p.x + PLAYER_W / 2;
     const pFeet = p.y + PLAYER_H;
+    // Čo nakazených priláka: rozžiarená fakľa zďaleka, zhasnutá iskra a horiace barikády.
+    const calls: { x: number; y: number; r: number; t: number }[] = [];
+    if (alive && this.flaring) calls.push({ x: pcx, y: pFeet - 8, r: FLARE_CALL, t: 4 });
+    for (const n of this.noises) calls.push({ ...n, r: SPARK_CALL, t: 3 });
+    for (const b of this.barricades)
+      if (b.state === 'burning')
+        calls.push({ x: b.col * TILE + TILE / 2, y: b.row * TILE + 8, r: FIRE_CALL, t: 1.5 });
+    this.noises = [];
     for (const g of this.ghouls) {
       if (!g.alive) continue;
       if (alive && this.tryStompGhoul(g)) continue;
       const dx = pcx - g.x;
       const sameFloor = Math.abs(pFeet - g.y) < 26;
-      // Fakľu pod plášťom nevidia; zbadajú hráča, až keď do nich takmer narazí.
-      const sight = this.shielded ? 18 : this.radius + GHOUL_SIGHT;
+      // Svetlo ťa prezrádza: čím väčší plameň, tým zďaleka ťa vidia. Fakľu pod plášťom
+      // nevidia vôbec; zbadajú hráča, až keď do nich takmer narazí.
+      const sight = this.shielded ? 18 : this.radius * GHOUL_SIGHT_PER_RADIUS + GHOUL_SIGHT;
       const sees = alive && sameFloor && Math.abs(dx) < sight;
       if (sees && !g.chasing) this.events.push({ type: 'ghoulNotice', x: g.x, y: g.y - GHOUL_H });
       g.chasing = sees;
+      g.lureTime = Math.max(0, g.lureTime - dt);
+      if (!sees)
+        for (const c of calls) {
+          if (Math.hypot(c.x - g.x, c.y - (g.y - 8)) > c.r) continue;
+          if (g.lureTime <= 0) this.events.push({ type: 'ghoulNotice', x: g.x, y: g.y - GHOUL_H });
+          g.lure = c.x;
+          g.lureTime = Math.max(g.lureTime, c.t);
+        }
 
       // Rozžiarená fakľa ich páli a zaháňa.
       const lamp = this.lamp;
@@ -1245,17 +1319,22 @@ export class Game {
         }
       } else g.hp = Math.min(1, g.hp + dt * 0.25);
 
+      const toLure = g.lure - g.x;
       const want = g.burning
         ? -Math.sign(dx || 1) * GHOUL_CHASE * 0.6
         : g.chasing
           ? Math.sign(dx) * GHOUL_CHASE
-          : g.dir * GHOUL_WALK;
+          : g.lureTime > 0
+            ? Math.abs(toLure) > 3
+              ? Math.sign(toLure) * GHOUL_CHASE * GHOUL_LURE
+              : 0
+            : g.dir * GHOUL_WALK;
       if (want !== 0 && !g.burning) g.dir = want > 0 ? 1 : -1;
       g.vx = approach(g.vx, want, 260 * dt);
       const nx = g.x + g.vx * dt;
-      if (this.ghoulBlocked(nx, g.y, Math.sign(g.vx))) {
+      if (this.walkerBlocked(nx, g.y, Math.sign(g.vx), GHOUL_W, GHOUL_H)) {
         g.vx = 0;
-        if (!g.chasing) g.dir = g.dir > 0 ? -1 : 1;
+        if (!g.chasing && g.lureTime <= 0) g.dir = g.dir > 0 ? -1 : 1;
       } else g.x = nx;
       g.step += Math.abs(g.vx) * dt;
 
@@ -1269,13 +1348,13 @@ export class Game {
     }
   }
 
-  /** Stena, priepasť, hroty alebo žumpa pred nakazeným. */
-  private ghoulBlocked(x: number, feet: number, dir: number): boolean {
+  /** Stena, priepasť, hroty alebo žumpa pred nakazeným či potkanom. */
+  private walkerBlocked(x: number, feet: number, dir: number, w: number, h: number): boolean {
     if (dir === 0) return false;
-    const col = Math.floor((x + dir * (GHOUL_W / 2)) / TILE);
+    const col = Math.floor((x + dir * (w / 2)) / TILE);
     const row = Math.floor((feet - 1) / TILE);
     const level = this.level;
-    const body = [row, Math.floor((feet - GHOUL_H + 1) / TILE)];
+    const body = [row, Math.floor((feet - h + 1) / TILE)];
     const wall = (r: number) => {
       const t = tileAt(level, col, r);
       if (t === Tile.Barricade)
@@ -1373,11 +1452,11 @@ export class Game {
       ic.vy = 0;
       ic.state = 'hang';
     }
-    for (const m of this.moths) {
-      m.x = m.home.x;
-      m.y = m.home.y;
-      m.vx = m.vy = 0;
-      m.drinking = false;
+    this.noises = [];
+    for (const r of this.rats) {
+      r.x = r.home.x;
+      r.vx = 0;
+      r.hp = 1;
     }
     for (const g of this.ghouls) {
       g.x = g.home.x;
@@ -1385,6 +1464,7 @@ export class Game {
       g.vx = 0;
       g.dir = -1;
       g.chasing = false;
+      g.lureTime = 0;
       g.hp = 1;
     }
     for (const s of this.shades) {

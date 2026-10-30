@@ -6,7 +6,7 @@
  *   ^  železné hroty        P  štart
  *   f  uhlík (smola do fakle) *  relikvia (tajomstvo)
  *   L  kaplnka (checkpoint) E  hranica na konci
- *   s  morový prízrak       m  roj múch (dusí fakľu)
+ *   s  morový prízrak       r  kŕdeľ potkanov (boja sa svetla; v tme zabijú)
  *   w  žumpa (smrteľná)     c  zhnité dosky (prelomia sa)
  *   i  slizký kameň (šmykľavý) b  napnutá plachta (vymrští)
  *   v  uvoľnený kus muriva (spadne)  S  veľký prízrak (3 zásahy)
@@ -75,7 +75,7 @@ export interface Level {
   lanterns: Point[];
   shades: Point[];
   bigShades: Point[];
-  moths: Point[];
+  rats: Point[];
   ghouls: Point[];
   herbs: Point[];
   /** Políčka s miazmou (stĺpec, riadok). */
@@ -120,7 +120,7 @@ export function parseLevel(def: LevelDef): Level {
     lanterns: [],
     shades: [],
     bigShades: [],
-    moths: [],
+    rats: [],
     ghouls: [],
     herbs: [],
     fog: [],
@@ -147,7 +147,7 @@ export function parseLevel(def: LevelDef): Level {
       else if (ch === '*') level.crystals.push(c);
       else if (ch === 'L') level.lanterns.push(c);
       else if (ch === 's') level.shades.push(c);
-      else if (ch === 'm') level.moths.push(c);
+      else if (ch === 'r') level.rats.push(c);
       else if (ch === 'g') level.ghouls.push(c);
       else if (ch === 'h') level.herbs.push(c);
       else if (ch === '~') level.fog.push({ col: x, row: y });

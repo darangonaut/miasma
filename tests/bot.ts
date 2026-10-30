@@ -12,7 +12,7 @@ import { TILE, Tile, isGround, tileAt } from '@/game/level';
 
 /**
  * Jednoduchý bot: beží doprava a skáče pred stenou, priepasťou a tŕňmi; na pohyblivé
- * plošiny počká a nechá sa odviezť. Prízraky, muchy a nakazených vypína. Smolu dopĺňa len
+ * plošiny počká a nechá sa odviezť. Prízraky, potkany a nakazených vypína. Smolu dopĺňa len
  * s `refuel`; bez neho overí, že uhlíky a kaplnky po ceste stačia (počíta smrti v tme). Vráti, či došiel k vatre, najďalší stĺpec a počet pádov.
  */
 export function botRun(
@@ -43,7 +43,7 @@ export function botRun(
   for (let t = 0; t < seconds && game.state !== 'done'; t += dt) {
     if (refuel) game.oil = 100;
     for (const s of game.shades) s.alive = false;
-    for (const m of game.moths) m.alive = false;
+    for (const r of game.rats) r.alive = false;
     for (const g of game.ghouls) g.alive = false;
     const p = game.player;
     const front = Math.floor((p.x + PLAYER_W + 4) / TILE);

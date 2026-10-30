@@ -252,15 +252,71 @@ describe('boj a jaskyne', () => {
     expect(game.sparks.length).toBe(0);
   });
 
-  it('mora pije olej, rozžiarenie ju spáli', () => {
-    const game = make([' Pm         E', '#############']);
-    run(game, 1.5);
-    expect(game.moths[0]!.drinking).toBe(true);
-    const a = game.oil;
-    run(game, 1);
-    expect(a - game.oil).toBeGreaterThan(4);
-    const events = run(game, 1, { flare: true });
-    expect(events.some((e) => e.type === 'mothDie')).toBe(true);
+  it('potkany sa držia na okraji svetla, pri ukrytej fakli zaútočia, rozžiarenie ich spáli', () => {
+    const rows = [' P        r          E', '######################'];
+    const lit = make(rows);
+    const events = run(lit, 4);
+    expect(events.some((e) => e.type === 'died')).toBe(false);
+    expect(lit.rats.length).toBe(3);
+    // Prišli až k okraju svetla, ale nie bližšie.
+    const nearest = Math.min(...lit.rats.map((r) => Math.abs(r.x - lit.lamp.x)));
+    expect(nearest).toBeLessThan(lit.radius);
+    expect(nearest).toBeGreaterThan(lit.radius - 24);
+
+    const hidden = make(rows);
+    run(hidden, 1.5);
+    const bite = run(hidden, 3, { down: true });
+    expect(bite).toContainEqual({ type: 'died', cause: 'rats' });
+
+    const burn = make(rows);
+    run(burn, 2);
+    const fire = run(burn, 1.5, { flare: true });
+    expect(fire.some((e) => e.type === 'ratDie')).toBe(true);
+  });
+
+  it('potkany nad priepasťou sa nevytvoria a z hrany nespadnú', () => {
+    const game = make(['    r        ', ' P          E', '##   ########']);
+    expect(game.rats.every((r) => !r.alive)).toBe(true);
+    const ledge = make([' P       r      E', '###  ######   ###']);
+    run(ledge, 6);
+    expect(ledge.rats.every((r) => r.x > 5 * TILE && r.x < 11 * TILE)).toBe(true);
+  });
+
+  it('svetlo prezrádza: rozžiarená fakľa a zhasnutá iskra prilákajú nakazených', () => {
+    // Nakazený na rímse vyššie hráča nevidí, kým fakľu nerozžiari.
+    const rows = [
+      '                g          ',
+      '            ##########     ',
+      ' P                        E',
+      '###########################',
+    ];
+    const calm = make(rows);
+    const g0 = calm.ghouls[0]!;
+    run(calm, 2);
+    expect(g0.lureTime).toBe(0);
+    const flare = make(rows);
+    flare.player.x = 9 * TILE;
+    const g = flare.ghouls[0]!;
+    const ev = run(flare, 0.3, { flare: true });
+    expect(ev.some((e) => e.type === 'ghoulNotice')).toBe(true);
+    expect(g.lureTime).toBeGreaterThan(0);
+    run(flare, 2);
+    expect(g.x).toBeLessThan(15 * TILE);
+
+    // Iskra, ktorá zhasne o stĺp, priláka nakazeného z rímsy k sebe.
+    const decoy = make([
+      '             g              ',
+      '         ##########         ',
+      ' P     #                   E',
+      '############################',
+    ]);
+    const d = decoy.ghouls[0]!;
+    decoy.step(1 / 60, { ...NO_INPUT, spark: true });
+    const noise = run(decoy, 0.5);
+    expect(noise.some((e) => e.type === 'fizzle')).toBe(true);
+    expect(d.lureTime).toBeGreaterThan(0);
+    run(decoy, 3);
+    expect(d.x).toBeLessThan(11 * TILE);
   });
 
   it('voda topí', () => {
