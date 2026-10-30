@@ -6,7 +6,15 @@ import '@fontsource/eb-garamond/400-italic.css';
 import '@fontsource/eb-garamond/600.css';
 import './styles.css';
 import { Sound } from './audio/audio';
-import { DREAD_LIMIT, Game, OIL_MAX, type GameEvent } from './game/game';
+import {
+  BELL_FRENZY,
+  BELL_PERIOD,
+  BELL_WARN,
+  DREAD_LIMIT,
+  Game,
+  OIL_MAX,
+  type GameEvent,
+} from './game/game';
 import { parseLevel } from './game/level';
 import { LEVELS } from './game/levels';
 import { parseSave, recordLevel, type SaveData } from './game/save';
@@ -337,6 +345,8 @@ function onEvents(events: GameEvent[]): void {
       window.setTimeout(() => (hurt.style.opacity = '0'), 160);
     } else if (e.type === 'died') {
       showToast(t(DEATHS[e.cause]!));
+    } else if (e.type === 'bell') {
+      showToast(hintText('bellToll'));
     } else if (e.type === 'exit') {
       doneTimer = 1.8;
     } else if (e.type === 'firefly' || e.type === 'lantern') {
@@ -356,6 +366,14 @@ function updateHud(g: Game): void {
   }
   $('.fireflies').textContent = `✶ ${g.fireflyCount}/${g.fireflies.length}`;
   $('.crystals').textContent = g.crystals.length ? `✝ ${g.crystalCount}/${g.crystals.length}` : '';
+  // Morový zvon: pásik sa plní do ďalšieho úderu, pri besnení sa vyprázdňuje.
+  const bell = $('.bell');
+  const left = g.nextBell - g.time;
+  bell.classList.toggle('soon', left < BELL_WARN && g.frenzy <= 0);
+  bell.classList.toggle('ringing', g.frenzy > 0);
+  $('.bell-fill').style.width = `${
+    g.frenzy > 0 ? (g.frenzy / BELL_FRENZY) * 100 : Math.max(0, 1 - left / BELL_PERIOD) * 100
+  }%`;
   dread.style.opacity = String(Math.min(1, g.dread / DREAD_LIMIT) * 0.9);
   const infection = $('.infection');
   infection.hidden = g.infection <= 0.001;

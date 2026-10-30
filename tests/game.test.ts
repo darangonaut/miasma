@@ -579,6 +579,34 @@ describe('nové svety', () => {
     expect(ev.some((e) => e.type === 'ghoulNotice')).toBe(false);
   });
 
+  it('morový zvon varuje, udrie a nakazení sa rozbehnú za hráčom', () => {
+    // Nakazený na vyššej rímse: hráča nevidí, kým neudrie zvon.
+    const rows = [
+      '                          g    ',
+      '                    ###########',
+      ' P                            E',
+      '###############################',
+    ];
+    const game = make(rows);
+    const g = game.ghouls[0]!;
+    game.nextBell = 4;
+    const events = run(game, 4.2);
+    expect(events.some((e) => e.type === 'bellWarn')).toBe(true);
+    expect(events.some((e) => e.type === 'bell')).toBe(true);
+    expect(game.frenzy).toBeGreaterThan(0);
+    run(game, 2);
+    // Dobehol až na kraj rímsy (z hrany nespadne).
+    expect(g.x).toBeLessThan(21 * TILE);
+
+    // S ukrytou fakľou zvon nakazeného privolá len na miesto, kde hráč stál.
+    const hidden = make(rows);
+    hidden.nextBell = 0.5;
+    run(hidden, 0.6, { down: true });
+    const spot = hidden.ghouls[0]!.lure;
+    run(hidden, 1, { down: true, right: true });
+    expect(hidden.ghouls[0]!.lure).toBe(spot);
+  });
+
   it('mimo cintorína nefúka', () => {
     const game = make(FLAT);
     run(game, 6);

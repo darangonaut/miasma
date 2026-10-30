@@ -268,6 +268,12 @@ export class Sound {
         case 'gust':
           this.noise(1.2, 700, 0.08, 'bandpass');
           break;
+        case 'bellWarn':
+          this.bell(0.025, 0);
+          break;
+        case 'bell':
+          [0, 1.7, 3.4].forEach((d) => this.bell(0.11, d));
+          break;
         case 'lightning':
           this.noise(0.25, 3000, 0.12, 'highpass');
           this.thunder(0.35 + Math.random() * 0.6);
@@ -310,6 +316,22 @@ export class Sound {
     wobble.start(t);
     o.stop(t + 0.85);
     wobble.stop(t + 0.85);
+  }
+
+  /** Veľký zvon: neharmonické alikvoty, dlhé doznievanie. */
+  private bell(volume: number, delay: number): void {
+    const base = 73.42;
+    for (const [mult, v, decay] of [
+      [0.5, 0.7, 7],
+      [1, 1, 5],
+      [1.2, 0.5, 4],
+      [1.5, 0.35, 3],
+      [2, 0.45, 2.6],
+      [2.74, 0.2, 1.6],
+      [3.76, 0.1, 1],
+    ] as const)
+      this.tone(base * mult, 'sine', volume * v, decay, this.echo ?? this.master!, delay);
+    this.tone(base * 2, 'sine', volume * 0.4, 4, this.master!, delay);
   }
 
   private tone(

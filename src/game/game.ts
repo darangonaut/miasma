@@ -179,6 +179,15 @@ export const FLARE_CALL = 240;
 export const SPARK_CALL = 120;
 const FIRE_CALL = 110;
 const GHOUL_LURE = 0.7;
+// --- Morový zvon: udrie v pravidelných intervaloch a nakazení sa rozbehnú za hráčom ---
+export const BELL_FIRST = 40;
+export const BELL_PERIOD = 50;
+/** Ako dlho po údere zvonu nakazení bežia za hráčom (s ukrytou fakľou len na miesto, kde stál). */
+export const BELL_FRENZY = 6;
+/** Odkiaľ zvon nakazených zburcuje. */
+const BELL_RANGE = 360;
+/** Varovanie pred zvonom (prvý vzdialený úder). */
+export const BELL_WARN = 3;
 // --- Potkany: boja sa svetla, ale keď fakľa zhasne alebo ju ukryješ, roztrhajú ťa ---
 export const RAT_W = 6;
 export const RAT_H = 4;
@@ -220,6 +229,8 @@ export type GameEvent =
   | { type: 'shield'; on: boolean }
   | { type: 'fogBurn'; x: number; y: number }
   | { type: 'gust'; dir: number }
+  | { type: 'bellWarn' }
+  | { type: 'bell' }
   | { type: 'lightning' }
   | { type: 'died'; cause: DeathCause }
   | { type: 'respawn' }
@@ -421,6 +432,9 @@ export class Game {
   sheltered = false;
   /** Záblesk blesku (1 = práve udrel, klesá k 0). */
   flash = 0;
+  /** Čas ďalšieho úderu zvonu a zostávajúci čas besnenia po ňom. */
+  nextBell = BELL_FIRST;
+  frenzy = 0;
   private events: GameEvent[] = [];
 
   constructor(readonly level: Level) {
@@ -608,6 +622,7 @@ export class Game {
       return this.events;
     }
     this.updateWeather(dt);
+    this.updateBell(dt);
     this.updateLight(dt, input);
     this.updateCrumbles(dt);
     this.updateBarricades(dt);
@@ -645,6 +660,25 @@ export class Game {
       this.flash = 1;
       this.nextFlash = this.time + 4 + this.skyRng.next() * 7;
       this.events.push({ type: 'lightning' });
+    }
+  }
+
+  /** Morový zvon: varovanie, úder a po ňom besnenie nakazených. */
+  private updateBell(dt: number): void {
+    const before = this.nextBell - (this.time - dt);
+    const left = this.nextBell - this.time;
+    if (before > BELL_WARN && left <= BELL_WARN) this.events.push({ type: 'bellWarn' });
+    this.frenzy = Math.max(0, this.frenzy - dt);
+    if (left > 0) return;
+    this.nextBell += BELL_PERIOD;
+    this.frenzy = BELL_FRENZY;
+    this.events.push({ type: 'bell' });
+    const c = this.center;
+    for (const g of this.ghouls) {
+      if (!g.alive || Math.hypot(g.x - c.x, g.y - 8 - c.y) > BELL_RANGE) continue;
+      g.lure = c.x;
+      g.lureTime = BELL_FRENZY;
+      this.events.push({ type: 'ghoulNotice', x: g.x, y: g.y - GHOUL_H });
     }
   }
 
@@ -1308,6 +1342,8 @@ export class Game {
       if (sees && !g.chasing) this.events.push({ type: 'ghoulNotice', x: g.x, y: g.y - GHOUL_H });
       g.chasing = sees;
       g.lureTime = Math.max(0, g.lureTime - dt);
+      // Po údere zvonu idú nakazení za hráčom; ukrytú fakľu nesledujú (idú na staré miesto).
+      if (this.frenzy > 0 && g.lureTime > 0 && alive && !this.shielded) g.lure = pcx;
       if (!sees)
         for (const c of calls) {
           if (Math.hypot(c.x - g.x, c.y - (g.y - 8)) > c.r) continue;
@@ -1339,7 +1375,7 @@ export class Game {
           ? Math.sign(dx) * GHOUL_CHASE
           : g.lureTime > 0
             ? Math.abs(toLure) > 3
-              ? Math.sign(toLure) * GHOUL_CHASE * GHOUL_LURE
+              ? Math.sign(toLure) * GHOUL_CHASE * (this.frenzy > 0 ? 1 : GHOUL_LURE)
               : 0
             : g.dir * GHOUL_WALK;
       if (want !== 0 && !g.burning) g.dir = want > 0 ? 1 : -1;
@@ -1527,6 +1563,9 @@ export class Game {
     this.radius = LIGHT_RADIUS;
     this.dread = 0;
     this.infection = 0;
+    this.frenzy = 0;
+    // Po smrti dostane hráč pokoj: zvon udrie až po celej perióde.
+    this.nextBell = Math.max(this.nextBell, this.time + BELL_PERIOD * 0.6);
     this.fog.set(this.fogHome);
     this.sparks.length = 0;
     this.swing = -1;

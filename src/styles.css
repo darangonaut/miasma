@@ -208,6 +208,51 @@ button.big:hover {
   display: none;
 }
 
+.bell {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.bell-icon {
+  width: 14px;
+  height: 14px;
+  fill: var(--ink);
+}
+
+.bell-bar {
+  width: 150px;
+  height: 5px;
+  overflow: hidden;
+  border: 1.5px solid var(--ink);
+}
+
+.bell-fill {
+  width: 0;
+  height: 100%;
+  background: var(--ink);
+}
+
+.bell.soon .bell-icon,
+.bell.ringing .bell-icon {
+  fill: var(--vermilion);
+  animation: swing 0.5s ease-in-out infinite alternate;
+}
+
+.bell.ringing .bell-fill {
+  background: var(--vermilion);
+}
+
+@keyframes swing {
+  from {
+    transform: rotate(-18deg);
+  }
+
+  to {
+    transform: rotate(18deg);
+  }
+}
+
 .counts {
   font-size: 17px;
   font-weight: 600;
