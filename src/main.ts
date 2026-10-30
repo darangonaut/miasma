@@ -18,7 +18,16 @@ import {
 } from './game/game';
 import { parseLevel } from './game/level';
 import { LEVELS } from './game/levels';
-import { parseSave, recordLevel, type SaveData } from './game/save';
+import {
+  SHOP,
+  buy,
+  levelCoins,
+  owned,
+  parseSave,
+  recordLevel,
+  type SaveData,
+  type ShopItem,
+} from './game/save';
 import { Controls } from './input/input';
 import { Renderer } from './render/renderer';
 import { getLanguage, hasKey, setLanguage, t, type Key, type Language } from './ui/i18n';
@@ -184,7 +193,8 @@ async function startLevel(index: number): Promise<void> {
   await rendererReady;
   sound.start();
   levelIndex = index;
-  game = new Game(parseLevel(LEVELS[index]!));
+  const save = readSave();
+  game = new Game(parseLevel(LEVELS[index]!), save.perks, save.herbs);
   sound.setWorld(LEVELS[index]!.world);
   renderer.setGame(game);
   paused = false;
@@ -290,9 +300,18 @@ const DEATHS: Record<string, Key> = {
 
 function finishLevel(g: Game): void {
   const def = LEVELS[levelIndex]!;
-  writeSave(
-    recordLevel(readSave(), levelIndex, def.id, g.fireflyCount, g.crystalCount, g.savedCount),
-  );
+  const result = {
+    fireflies: g.fireflyCount,
+    crystals: g.crystalCount,
+    survivors: g.savedCount,
+    nests: g.nests.length,
+    herbs: g.herbsCarried,
+  };
+  const before = readSave();
+  const earned = levelCoins(before, def.id, result);
+  writeSave(recordLevel(before, levelIndex, def.id, result));
+  $('.shop-earned').textContent = earned > 0 ? t('coinsEarned', { n: earned }) : '';
+  renderShop();
   $('.done-level').textContent = levelName(levelIndex);
   $('.done-stats').textContent = t('stats', {
     f: g.fireflyCount,
@@ -314,6 +333,46 @@ function finishLevel(g: Game): void {
   hint.hidden = true;
   touch.hidden = true;
   show(done);
+}
+
+const SHOP_ITEMS: ShopItem[] = ['herb', 'flask', 'mask', 'cane'];
+const SHOP_KEYS: Record<ShopItem, [Key, Key]> = {
+  herb: ['shopHerb', 'shopHerbDesc'],
+  flask: ['shopFlask', 'shopFlaskDesc'],
+  mask: ['shopMask', 'shopMaskDesc'],
+  cane: ['shopCane', 'shopCaneDesc'],
+};
+
+/** Lekáreň na obrazovke po leveli: groše a tovar s cenou a úrovňou. */
+function renderShop(): void {
+  const save = readSave();
+  $('.shop-title').textContent = t('shopTitle');
+  $('.shop-coins').textContent = t('coins', { n: save.coins });
+  const list = $('.shop-items');
+  list.innerHTML = '';
+  for (const item of SHOP_ITEMS) {
+    const { price, max } = SHOP[item];
+    const have = owned(save, item);
+    const [name, desc] = SHOP_KEYS[item];
+    const b = document.createElement('button');
+    b.className = 'shop-item';
+    b.disabled = have >= max || save.coins < price;
+    const title = document.createElement('strong');
+    title.textContent = t(name);
+    const info = document.createElement('small');
+    info.textContent = t(desc);
+    const meta = document.createElement('span');
+    meta.textContent = have >= max ? t('soldOut') : `${price} ₰ · ${have}/${max}`;
+    b.append(title, info, meta);
+    b.addEventListener('click', () => {
+      const next = buy(readSave(), item);
+      if (!next) return;
+      writeSave(next);
+      sound.play([{ type: 'herb', x: 0, y: 0 }]);
+      renderShop();
+    });
+    list.append(b);
+  }
 }
 
 /** Záver hry po poslednom leveli. */

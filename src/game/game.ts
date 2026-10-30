@@ -9,6 +9,7 @@ import {
   type World,
 } from './level';
 import { Rng } from './rng';
+import { NO_PERKS, type Perks } from './save';
 
 export interface Input {
   left: boolean;
@@ -473,7 +474,18 @@ export class Game {
   frenzy = 0;
   private events: GameEvent[] = [];
 
-  constructor(readonly level: Level) {
+  /** Smola horí pomalšie s väčšou ampulkou, miazma nakazí pomalšie s lepšou maskou. */
+  private drainScale: number;
+  private infectScale: number;
+
+  constructor(
+    readonly level: Level,
+    readonly perks: Perks = NO_PERKS,
+    herbs = 0,
+  ) {
+    this.drainScale = 1 - perks.flask * 0.12;
+    this.infectScale = 1 - perks.mask * 0.25;
+    this.herbsCarried = herbs;
     this.rng = new Rng(hash(level.id));
     this.skyRng = new Rng(hash(level.id) ^ 0x5bd1e995);
     this.checkpoint = { ...level.start };
@@ -813,7 +825,7 @@ export class Game {
     this.flareHeld = wantsFlare;
     this.flaring = wantsFlare;
     const drain = wantsFlare ? FLARE_DRAIN : shield ? OIL_DRAIN * SHIELD_DRAIN : OIL_DRAIN;
-    this.oil = Math.max(0, this.oil - drain * dt);
+    this.oil = Math.max(0, this.oil - drain * this.drainScale * dt);
     const target = this.flaring ? FLARE_RADIUS : shield ? SHIELD_RADIUS : baseRadius(this.oil);
     this.radius += (target - this.radius) * Math.min(1, dt * (this.flaring || shield ? 10 : 4));
     if (this.oil <= 0 || shield) {
@@ -908,7 +920,7 @@ export class Game {
       density = Math.max(density, this.fog[Math.floor(y / TILE) * w + col] ?? 0);
     if (col < 0 || col >= w) density = 0;
     if (density > 0.05) {
-      this.infection += dt * INFECT_RATE * density;
+      this.infection += dt * INFECT_RATE * density * this.infectScale;
       if (this.infection >= 1) this.die('miasma');
     } else this.infection = Math.max(0, this.infection - dt * INFECT_HEAL);
   }
@@ -1618,7 +1630,7 @@ export class Game {
       if (!g.alive || this.swingHits.has(g) || !inReach(g.x, g.y - GHOUL_H, g.y, GHOUL_W)) continue;
       this.swingHits.add(g);
       this.events.push({ type: 'caneHit', x: g.x, y: g.y - GHOUL_H / 2 });
-      this.knockGhoul(g, dir, CANE_DAMAGE, CANE_KNOCK);
+      this.knockGhoul(g, dir, this.perks.cane > 0 ? 1 : CANE_DAMAGE, CANE_KNOCK);
     }
     for (const r of this.rats) {
       if (!r.alive || !inReach(r.x, r.y - RAT_H, r.y, RAT_W)) continue;

@@ -590,7 +590,7 @@ button.big:hover {
   color: var(--vermilion-light);
 }
 
-.screen button:not(.big):not(.langs button) {
+.screen > button:not(.big) {
   min-width: 230px;
 }
 
@@ -674,6 +674,93 @@ button.big:hover {
 .herbs {
   margin-left: 10px;
   color: var(--verdigris);
+}
+
+/* --- Lekáreň po leveli --- */
+.shop {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  max-width: min(94vw, 760px);
+  margin: 4px 0;
+  padding: 10px 16px 14px;
+  color: var(--ink);
+  background: var(--grain), var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow:
+    0 0 0 1px var(--paper-dark),
+    4px 4px 0 rgb(0 0 0 / 50%);
+}
+
+.shop-title {
+  margin: 0;
+  font-family: var(--gothic);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--vermilion);
+}
+
+.shop-coins {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.shop-earned {
+  font-size: 15px;
+  font-style: italic;
+}
+
+.shop-earned:empty {
+  display: none;
+}
+
+.shop-items {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.screen .shop-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 6px 10px;
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.15;
+  box-shadow: 2px 2px 0 rgb(0 0 0 / 40%);
+}
+
+.shop-item strong {
+  font-family: var(--gothic);
+  font-size: 18px;
+}
+
+.shop-item small {
+  font-size: 13px;
+  font-style: italic;
+}
+
+.shop-item span {
+  font-weight: 600;
+  color: var(--vermilion);
+}
+
+.shop-item:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+@media (max-width: 700px), (max-height: 500px) {
+  .shop-items {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .shop-item small {
+    display: none;
+  }
 }
 
 #touch .shield {

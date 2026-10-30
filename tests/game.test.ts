@@ -206,12 +206,21 @@ describe('uloženie', () => {
   it('odomkne ďalší level a drží najlepšie skóre', async () => {
     const { parseSave, recordLevel } = await import('@/game/save');
     let save = parseSave(null);
-    save = recordLevel(save, 0, 'a', 5, 1);
-    save = recordLevel(save, 0, 'a', 3, 0);
+    const r = { fireflies: 5, crystals: 1, survivors: 1, nests: 2, herbs: 1 };
+    save = recordLevel(save, 0, 'a', r);
+    // Prvé prejdenie: 2 za preživšieho, 1 za relikviu, 1 za každé hniezdo.
+    expect(save.coins).toBe(5);
+    save = recordLevel(save, 0, 'a', { ...r, fireflies: 3, crystals: 0, survivors: 1 });
+    expect(save.coins).toBe(5);
     expect(save.unlocked).toBe(1);
-    expect(save.best.a).toEqual({ fireflies: 5, crystals: 1, survivors: 0 });
+    expect(save.best.a).toEqual({ fireflies: 5, crystals: 1, survivors: 1 });
     expect(parseSave(JSON.stringify(save))).toEqual(save);
     expect(parseSave('nezmysel').unlocked).toBe(0);
+    const { buy } = await import('@/game/save');
+    const bought = buy(save, 'mask')!;
+    expect(bought.coins).toBe(0);
+    expect(bought.perks.mask).toBe(1);
+    expect(buy(bought, 'herb')).toBeNull();
   });
 });
 
@@ -647,6 +656,35 @@ describe('nové svety', () => {
     expect(bell.some((e) => e.type === 'turned')).toBe(true);
     expect(cold.ghouls.length).toBe(ghouls + 1);
     expect(cold.survivors[0]!.state).toBe('turned');
+  });
+
+  it('výbava z lekárne: ampulka, maska a okutá palica', () => {
+    const rows = [' P                  E', '#####################'];
+    const perks = { flask: 2, mask: 2, cane: 1 };
+    const plain = make(rows);
+    const def: LevelDef = { id: 't', name: 't', world: 'quarter', rows };
+    const rich = new Game(parseLevel(def), perks, 2);
+    expect(rich.herbsCarried).toBe(2);
+    run(plain, 3);
+    run(rich, 3);
+    expect(rich.oil).toBeGreaterThan(plain.oil + 1);
+
+    const fog = ['  ~~~~~~~~~~~~   ', ' P~~~~~~~~~~~~  E', '#################'];
+    const sick = make(fog);
+    const masked = new Game(parseLevel({ ...def, rows: fog }), perks);
+    run(sick, 0.6, { right: true });
+    run(masked, 0.6, { right: true });
+    expect(masked.infection).toBeLessThan(sick.infection * 0.7);
+
+    const one = new Game(
+      parseLevel({ ...def, rows: [' P     g        E', '#################'] }),
+      perks,
+    );
+    const g = one.ghouls[0]!;
+    one.player.x = g.x - 18;
+    one.step(DT, { ...NO_INPUT, cane: true });
+    run(one, 0.4);
+    expect(g.alive).toBe(false);
   });
 
   it('mimo cintorína nefúka', () => {
