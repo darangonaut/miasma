@@ -523,3 +523,14 @@ button.big:hover {
     font-size: 14px;
   }
 }
+
+/* Na širokej obrazovke patrí pravá časť úvodu lekárovi, texty sú vľavo. */
+@media (min-aspect-ratio: 6/5) {
+  #start {
+    padding-right: 42vw;
+  }
+
+  #start .logo {
+    font-size: clamp(44px, 8.5vw, 130px);
+  }
+}

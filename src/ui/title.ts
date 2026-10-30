@@ -1,10 +1,10 @@
 /**
- * Úvodná scéna v siluetovom štýle: mesto v noci pod krvavým mesiacom, dym z hraníc a dážď.
- * Na hradbe stojí morový lekár s fakľou, v okne domu občas zažiaria oči prízraku.
+ * Úvodná scéna: morový lekár zblízka, z profilu proti krvavému mesiacu. Fakľa ho osvetľuje
+ * zdola, v skle masky sa odráža plameň. V tme žmurkajú oči prízrakov a keď udrie blesk,
+ * na ulici za ním na okamih vidno dav nakazených.
  */
-import { DOCTOR_TORCH, drawDoctor } from '@/render/doctor';
 
-const INK = '#05060b';
+const INK = '#030304';
 
 function rand(i: number, seed: number): number {
   const x = Math.sin(i * 127.1 + seed * 311.7) * 43758.5453;
@@ -13,16 +13,20 @@ function rand(i: number, seed: number): number {
 
 export class TitleScene {
   private ctx: CanvasRenderingContext2D;
+  /** Statické pozadie (nebo, mesiac, mesto). */
   private backdrop = document.createElement('canvas');
+  /** Silueta lekára (čierna), každý snímok sa na jej kópiu dokreslí svetlo fakle. */
+  private figure = document.createElement('canvas');
+  private lit = document.createElement('canvas');
   private running = false;
   private start = performance.now();
   private w = 0;
   private h = 0;
   private dpr = 1;
-  private rain = Array.from({ length: 140 }, (_, i) => ({
+  private rain = Array.from({ length: 160 }, (_, i) => ({
     x: rand(i, 1),
     y: rand(i, 2),
-    speed: 0.7 + rand(i, 3) * 0.5,
+    speed: 0.8 + rand(i, 3) * 0.6,
   }));
 
   constructor(private readonly canvas: HTMLCanvasElement) {
@@ -48,60 +52,81 @@ export class TitleScene {
     this.running = false;
   }
 
-  /** Miesto, kde stojí lekár (vrch hradby), a jeho mierka. */
-  private hero(): { x: number; y: number; s: number } {
-    const s = Math.max(2.5, Math.min(this.h / 110, this.w / 140));
-    return { x: this.w * 0.2, y: this.wallY(), s };
+  /** Stred hlavy a mierka portrétu (1 jednotka = stotina výšky, na úzkych obrazovkách menej). */
+  private head(): { x: number; y: number; s: number } {
+    const { w, h } = this;
+    const s = Math.min(h / 135, w / 120);
+    const x = w > h * 1.2 ? w * 0.72 : w * 0.62;
+    return { x, y: h * 0.47, s };
   }
 
-  private wallY(): number {
-    return this.h * 0.8;
+  /** Plameň fakle (v súradniciach obrazovky). */
+  private torch(): { x: number; y: number } {
+    const { x, y, s } = this.head();
+    return { x: x - 33 * s, y: y + 30 * s };
   }
 
   private layout(): void {
     this.dpr = Math.min(window.devicePixelRatio || 1, 2);
     this.w = this.canvas.clientWidth || window.innerWidth;
     this.h = this.canvas.clientHeight || window.innerHeight;
-    for (const c of [this.canvas, this.backdrop]) {
+    for (const c of [this.canvas, this.backdrop, this.figure, this.lit]) {
       c.width = Math.round(this.w * this.dpr);
       c.height = Math.round(this.h * this.dpr);
     }
     this.paintBackdrop();
+    this.paintFigure();
   }
 
-  /** Okno domu vpravo, v ktorom sa zjavujú oči. */
-  private window(): { x: number; y: number; size: number } {
-    const { w, h } = this;
-    return { x: w * 0.74, y: h * 0.66, size: Math.max(10, h * 0.03) };
-  }
-
-  /** Statické vrstvy: nebo, mesto, dym, domy a hradba v popredí. */
   private paintBackdrop(): void {
     const ctx = this.backdrop.getContext('2d')!;
     const { w, h } = this;
+    const { x: hx, y: hy, s } = this.head();
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     const sky = ctx.createLinearGradient(0, 0, 0, h);
-    sky.addColorStop(0, '#040306');
-    sky.addColorStop(0.45, '#120a0e');
-    sky.addColorStop(0.75, '#2c1614');
-    sky.addColorStop(1, '#5e2a1a');
+    sky.addColorStop(0, '#020103');
+    sky.addColorStop(0.5, '#0c0608');
+    sky.addColorStop(0.85, '#22100c');
+    sky.addColorStop(1, '#3a1810');
     ctx.fillStyle = sky;
     ctx.fillRect(0, 0, w, h);
-    for (let i = 0; i < 70; i++) {
-      ctx.fillStyle = `rgba(235,215,210,${(0.08 + rand(i, 5) * 0.25).toFixed(2)})`;
+
+    // Krvavý mesiac priamo za klobúkom: lekár je proti nemu silueta.
+    const mx = hx + 6 * s;
+    const my = hy - 30 * s;
+    const mr = 27 * s;
+    const halo = ctx.createRadialGradient(mx, my, mr * 0.9, mx, my, mr * 3.2);
+    halo.addColorStop(0, 'rgba(200,70,50,0.35)');
+    halo.addColorStop(1, 'rgba(200,70,50,0)');
+    ctx.fillStyle = halo;
+    ctx.fillRect(mx - mr * 4, my - mr * 4, mr * 8, mr * 8);
+    const moon = ctx.createRadialGradient(mx - mr * 0.3, my - mr * 0.3, mr * 0.1, mx, my, mr);
+    moon.addColorStop(0, '#d88a70');
+    moon.addColorStop(1, '#8a3424');
+    ctx.fillStyle = moon;
+    ctx.beginPath();
+    ctx.arc(mx, my, mr, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(70,20,14,0.35)';
+    for (const [dx, dy, r] of [
+      [-0.35, -0.2, 0.22],
+      [0.3, 0.25, 0.16],
+      [0.1, -0.45, 0.1],
+      [-0.1, 0.5, 0.12],
+    ] as const) {
       ctx.beginPath();
-      ctx.arc(rand(i, 6) * w, rand(i, 7) * h * 0.5, 0.4 + rand(i, 8) * 0.8, 0, Math.PI * 2);
+      ctx.arc(mx + dx * mr, my + dy * mr, r * mr, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // Vzdialené mesto: strechy, veže kostolov a pár svietiacich oblokov.
-    const base = h * 0.72;
-    ctx.fillStyle = '#140c10';
+    // Mesto v diaľke: strechy, veže a šibenica.
+    const base = h * 0.8;
+    ctx.fillStyle = '#0a0507';
     let x = -10;
     let i = 0;
     while (x < w) {
-      const hw = w * (0.03 + rand(i, 9) * 0.04);
-      const hh = h * (0.06 + rand(i, 10) * 0.1);
+      const hw = w * (0.03 + rand(i, 9) * 0.05);
+      const hh = h * (0.04 + rand(i, 10) * 0.09);
       const roof = hw * (0.5 + rand(i, 11) * 0.4);
       ctx.beginPath();
       ctx.moveTo(x, h);
@@ -110,261 +135,347 @@ export class TitleScene {
       ctx.lineTo(x + hw, base - hh);
       ctx.lineTo(x + hw, h);
       ctx.fill();
-      if (rand(i, 12) < 0.3) {
-        ctx.fillStyle = 'rgba(255,150,70,0.45)';
+      if (rand(i, 12) < 0.18) {
+        ctx.fillStyle = 'rgba(255,120,50,0.35)';
         ctx.fillRect(
-          x + hw * 0.4,
+          x + hw * 0.45,
           base - hh * 0.6,
-          Math.max(1.5, hw * 0.1),
-          Math.max(2, hh * 0.12),
+          Math.max(1.5, hw * 0.08),
+          Math.max(2, hh * 0.1),
         );
-        ctx.fillStyle = '#140c10';
+        ctx.fillStyle = '#0a0507';
       }
-      x += hw * 0.9;
+      x += hw * 0.92;
       i++;
     }
-    for (const sx of [0.42, 0.63, 0.9]) {
+    for (const sx of [0.12, 0.4]) {
       const tx = w * sx;
-      const th = h * (0.28 + rand(sx * 10, 13) * 0.08);
-      const tw = Math.max(10, w * 0.022);
-      ctx.fillRect(tx - tw / 2, base - th * 0.55, tw, th * 0.55 + h);
+      const th = h * 0.3;
+      const tw = Math.max(8, w * 0.018);
+      ctx.fillRect(tx - tw / 2, base - th * 0.55, tw, th);
       ctx.beginPath();
       ctx.moveTo(tx - tw * 0.6, base - th * 0.55);
       ctx.lineTo(tx, base - th);
       ctx.lineTo(tx + tw * 0.6, base - th * 0.55);
       ctx.fill();
-      ctx.fillRect(tx - 0.8, base - th - h * 0.03, 1.6, h * 0.03);
-      ctx.fillRect(tx - h * 0.008, base - th - h * 0.022, h * 0.016, 1.6);
     }
-    // Dym z hraníc stúpa nad mestom.
-    for (let k = 0; k < 3; k++) {
-      const sx = w * (0.35 + k * 0.22);
-      const g = ctx.createLinearGradient(0, h * 0.1, 0, base);
-      g.addColorStop(0, 'rgba(70,40,34,0)');
-      g.addColorStop(1, 'rgba(90,50,38,0.4)');
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.moveTo(sx - w * 0.01, base);
-      ctx.quadraticCurveTo(sx - w * 0.05, h * 0.4, sx + w * 0.03, h * 0.08);
-      ctx.quadraticCurveTo(sx + w * 0.07, h * 0.42, sx + w * 0.02, base);
-      ctx.fill();
-    }
-    // Hmla pri zemi.
-    const fog = ctx.createLinearGradient(0, h * 0.6, 0, h);
-    fog.addColorStop(0, 'rgba(150,80,50,0)');
-    fog.addColorStop(1, 'rgba(120,60,40,0.25)');
+    const gx = w * 0.27;
+    const gh = h * 0.2;
+    ctx.fillRect(gx - 1.5, base - gh, 3, gh);
+    ctx.fillRect(gx - 1.5, base - gh, gh * 0.4, 3);
+    ctx.strokeStyle = '#0a0507';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(gx + gh * 0.34, base - gh);
+    ctx.lineTo(gx + gh * 0.34, base - gh * 0.62);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(gx + gh * 0.34, base - gh * 0.56, gh * 0.03, gh * 0.06, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    // Dym z hraníc.
+    const fog = ctx.createLinearGradient(0, h * 0.55, 0, h);
+    fog.addColorStop(0, 'rgba(120,50,30,0)');
+    fog.addColorStop(1, 'rgba(110,45,28,0.3)');
     ctx.fillStyle = fog;
-    ctx.fillRect(0, h * 0.55, w, h * 0.45);
+    ctx.fillRect(0, h * 0.5, w, h * 0.5);
+  }
 
-    // Bližšie domy vpravo so šibenicou.
-    ctx.fillStyle = '#08060a';
-    const near = h * 0.86;
-    let nx = w * 0.38;
-    let n = 0;
-    while (nx < w) {
-      const hw = w * (0.06 + rand(n, 14) * 0.05);
-      const hh = h * (0.14 + rand(n, 15) * 0.12);
-      const roof = hw * (0.55 + rand(n, 16) * 0.3);
-      ctx.beginPath();
-      ctx.moveTo(nx, h);
-      ctx.lineTo(nx, near - hh);
-      ctx.lineTo(nx + hw / 2, near - hh - roof);
-      ctx.lineTo(nx + hw, near - hh);
-      ctx.lineTo(nx + hw, h);
-      ctx.fill();
-      ctx.fillRect(nx + hw * 0.7, near - hh - roof * 0.8, Math.max(3, hw * 0.08), roof * 0.5);
-      nx += hw + w * 0.01;
-      n++;
-    }
-    const win = this.window();
-    ctx.fillStyle = '#000000';
-    ctx.fillRect(win.x - win.size, win.y - win.size * 0.7, win.size * 2, win.size * 1.4);
-    const gx = w * 0.56;
-    const gh = h * 0.24;
-    ctx.fillRect(gx - 2, near - gh, 4, gh + h);
-    ctx.fillRect(gx - 2, near - gh, gh * 0.45, 3.5);
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 1.2;
-    ctx.beginPath();
-    ctx.moveTo(gx + gh * 0.38, near - gh + 3);
-    ctx.lineTo(gx + gh * 0.38, near - gh * 0.55);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.ellipse(gx + gh * 0.38, near - gh * 0.5, gh * 0.03, gh * 0.05, 0, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Mestská hradba v popredí s cimburím.
+  /** Silueta lekára zblízka: plášť, kapucňa, klobúk, zobák, ruka s fakľou. */
+  private paintFigure(): void {
+    const ctx = this.figure.getContext('2d')!;
+    const { x: hx, y: hy, s } = this.head();
+    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    ctx.clearRect(0, 0, this.w, this.h);
+    ctx.translate(hx, hy);
+    ctx.scale(s, s);
     ctx.fillStyle = INK;
-    const top = this.wallY();
-    ctx.fillRect(0, top, w * 0.4, h - top);
-    const merlon = Math.max(10, w * 0.022);
-    for (let mx = 0; mx < w * 0.4 - merlon; mx += merlon * 2)
-      if (Math.abs(mx + merlon / 2 - w * 0.2) > merlon * 1.6)
-        ctx.fillRect(mx, top - merlon * 0.8, merlon, merlon * 0.8 + 1);
+    ctx.strokeStyle = INK;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    // Plášť a plecia (siahajú pod spodný okraj).
     ctx.beginPath();
-    ctx.moveTo(w * 0.4, top);
-    ctx.lineTo(w * 0.44, h);
-    ctx.lineTo(w * 0.4, h);
+    ctx.moveTo(-40, 80);
+    ctx.quadraticCurveTo(-36, 34, -16, 20);
+    ctx.lineTo(-4, 13);
+    ctx.lineTo(14, 12);
+    ctx.quadraticCurveTo(40, 22, 50, 48);
+    ctx.lineTo(58, 80);
+    ctx.closePath();
+    ctx.fill();
+    // Kapucňa okolo hlavy.
+    ctx.beginPath();
+    ctx.moveTo(-12, -8);
+    ctx.quadraticCurveTo(-20, 14, -14, 24);
+    ctx.lineTo(18, 24);
+    ctx.quadraticCurveTo(22, 4, 16, -10);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(1, 1, 14, 16, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Zobák masky, zahnutý nadol.
+    ctx.beginPath();
+    ctx.moveTo(-9, -6);
+    ctx.quadraticCurveTo(-36, -5, -60, 23);
+    ctx.quadraticCurveTo(-36, 11, -9, 11);
+    ctx.closePath();
+    ctx.fill();
+    // Klobúk so širokou strechou.
+    ctx.beginPath();
+    ctx.moveTo(-12, -12);
+    ctx.quadraticCurveTo(-13, -26, -10, -39);
+    ctx.quadraticCurveTo(2, -42, 14, -40);
+    ctx.quadraticCurveTo(16, -26, 16, -12);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(2, -12, 42, 6.5, -0.07, 0, Math.PI * 2);
+    ctx.fill();
+    // Ruka v rukavici a fakľa.
+    ctx.lineWidth = 9;
+    ctx.beginPath();
+    ctx.moveTo(-14, 40);
+    ctx.quadraticCurveTo(-22, 48, -27, 52);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(-28, 50, 5.5, 4.5, -0.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineWidth = 3.2;
+    ctx.beginPath();
+    ctx.moveTo(-24, 80);
+    ctx.lineTo(-32, 33);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.roundRect(-36, 28, 7.5, 7, 1.5);
     ctx.fill();
   }
 
   private draw(t: number): void {
     const ctx = this.ctx;
     const { w, h } = this;
+    const { x: hx, y: hy, s } = this.head();
+    const fire = this.torch();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.drawImage(this.backdrop, 0, 0);
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    const { x, y, s } = this.hero();
-    const flicker =
-      1 + Math.sin(t * 13) * 0.05 + Math.sin(t * 7.1) * 0.04 + Math.sin(t * 29) * 0.02;
-    const dy = Math.sin(t * 1.3) * 0.3;
-    // Fakľa v ruke (súradnice postavy 0–14 × 0–17, nohy na y = 15.4).
-    const fx = x + (DOCTOR_TORCH.x - 7) * s;
-    const fy = y + (DOCTOR_TORCH.y - 15.4 + dy) * s;
 
-    // Blesk: raz za čas sa celé nebo rozsvieti.
-    const cycle = t % 11;
+    // Blesk: dve bliknutia raz za čas; vtedy vidno dav nakazených na ulici.
+    const cycle = t % 13;
     const flash =
-      cycle < 0.08
+      cycle < 0.07
         ? 1
-        : cycle < 0.16
-          ? 0.2
-          : cycle < 0.26
-            ? 0.8
-            : Math.max(0, 0.8 - (cycle - 0.26) * 2);
+        : cycle < 0.15
+          ? 0.15
+          : cycle < 0.24
+            ? 0.75
+            : Math.max(0, 0.75 - (cycle - 0.24) * 1.6);
+    if (flash > 0.02) this.drawCrowd(ctx, flash);
 
-    // Tma ako v hre: všade okrem kruhu svetla okolo fakle, okraje ešte tmavšie.
-    const dark = ctx.createRadialGradient(fx, fy, 0, fx, fy, Math.max(w, h) * 0.9);
-    const k = 1 - flash * 0.6;
-    dark.addColorStop(0, 'rgba(4,2,4,0)');
-    dark.addColorStop(
-      Math.min(0.5, (42 * s) / Math.max(w, h)),
-      `rgba(4,2,4,${(0.5 * k).toFixed(2)})`,
-    );
-    dark.addColorStop(1, `rgba(4,2,4,${(0.8 * k).toFixed(2)})`);
+    // Tma s mihotaním fakle.
+    const flicker =
+      1 + Math.sin(t * 11) * 0.05 + Math.sin(t * 6.7) * 0.04 + Math.sin(t * 27) * 0.02;
+    const dark = ctx.createRadialGradient(fire.x, fire.y, 0, fire.x, fire.y, Math.max(w, h));
+    const k = 1 - flash * 0.7;
+    dark.addColorStop(0, 'rgba(2,1,2,0)');
+    dark.addColorStop(0.18 * flicker, `rgba(2,1,2,${(0.35 * k).toFixed(2)})`);
+    dark.addColorStop(0.7, `rgba(2,1,2,${(0.82 * k).toFixed(2)})`);
     ctx.fillStyle = dark;
     ctx.fillRect(0, 0, w, h);
-    this.drawMoon(ctx);
 
-    // Teplá žiara fakle.
-    const r = 42 * s * flicker;
-    const glow = ctx.createRadialGradient(fx, fy, 0, fx, fy, r);
-    glow.addColorStop(0, 'rgba(255,200,120,0.5)');
-    glow.addColorStop(0.3, 'rgba(255,140,60,0.2)');
-    glow.addColorStop(1, 'rgba(255,110,40,0)');
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.fillStyle = glow;
-    ctx.fillRect(fx - r, fy - r, r * 2, r * 2);
-    ctx.globalCompositeOperation = 'source-over';
-
-    this.drawHero(ctx, x, y, s, t, dy);
-    this.drawFlame(ctx, fx, fy, s, t);
-
-    // Iskry stúpajú z fakle.
-    for (let i = 0; i < 10; i++) {
-      const life = (t * 0.6 + rand(i, 20)) % 1;
-      const ex = fx + Math.sin(t * 2 + i * 1.7) * s * 2 + (rand(i, 21) - 0.5) * s * 4;
-      const ey = fy - life * s * 26;
-      const green = Math.round(150 + rand(i, 22) * 80);
-      ctx.fillStyle = `rgba(255,${green},80,${((1 - life) * 0.8).toFixed(2)})`;
-      ctx.beginPath();
-      ctx.arc(ex, ey, Math.max(0.6, s * 0.25), 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // Oči prízraku v okne občas zažiaria.
-    const eyeCycle = t % 9;
-    if (eyeCycle > 3 && eyeCycle < 6.5 && !(eyeCycle > 4.6 && eyeCycle < 4.75)) {
-      const win = this.window();
-      const a = Math.min(1, (eyeCycle - 3) * 2, (6.5 - eyeCycle) * 2);
-      ctx.fillStyle = `rgba(238,242,255,${(a * 0.9).toFixed(2)})`;
+    // Oči prízrakov v tme vľavo: zjavujú sa a miznú.
+    for (let i = 0; i < 4; i++) {
+      const period = 7 + i * 2.3;
+      const phase = (t + i * 3.1) % period;
+      if (phase > 3) continue;
+      const a = Math.min(1, phase * 2, (3 - phase) * 2) * (1 - flash);
+      if (phase > 1.4 && phase < 1.55) continue;
+      const ex = w * (0.05 + rand(i, 31) * 0.4);
+      const ey = h * (0.15 + rand(i, 32) * 0.5);
+      const es = Math.max(1.2, s * (0.35 + rand(i, 33) * 0.3));
+      ctx.fillStyle = `rgba(235,240,255,${(a * 0.85).toFixed(2)})`;
       ctx.shadowColor = '#d8e4ff';
       ctx.shadowBlur = 8;
-      for (const dx of [-0.35, 0.35]) {
+      for (const dx of [-1, 1]) {
         ctx.beginPath();
-        ctx.ellipse(
-          win.x + dx * win.size,
-          win.y,
-          win.size * 0.14,
-          win.size * 0.08,
-          0,
-          0,
-          Math.PI * 2,
-        );
+        ctx.ellipse(ex + dx * es * 2.2, ey, es, es * 0.55, 0, 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.shadowBlur = 0;
     }
 
-    // Dážď.
-    ctx.strokeStyle = 'rgba(190,190,210,0.16)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    for (const d of this.rain) {
-      const ry = ((d.y + t * d.speed) % 1) * (h + 40) - 20;
-      const rx = (d.x * (w + 60) - ry * 0.15 + w + 60) % (w + 60);
-      ctx.moveTo(rx, ry);
-      ctx.lineTo(rx - 3, ry + 16);
-    }
-    ctx.stroke();
+    // Lekár: silueta, na ktorú zdola dopadá svetlo fakle.
+    const lit = this.lit.getContext('2d')!;
+    lit.setTransform(1, 0, 0, 1, 0, 0);
+    lit.globalCompositeOperation = 'source-over';
+    lit.clearRect(0, 0, this.lit.width, this.lit.height);
+    lit.drawImage(this.figure, 0, 0);
+    lit.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    lit.globalCompositeOperation = 'source-atop';
+    const r = 60 * s * flicker;
+    const warm = lit.createRadialGradient(fire.x, fire.y, 0, fire.x, fire.y, r);
+    warm.addColorStop(0, 'rgba(255,160,80,0.7)');
+    warm.addColorStop(0.18, 'rgba(190,70,25,0.35)');
+    warm.addColorStop(0.45, 'rgba(80,20,8,0.12)');
+    warm.addColorStop(1, 'rgba(0,0,0,0)');
+    lit.fillStyle = warm;
+    lit.fillRect(0, 0, this.w, this.h);
+    // Blesk obkreslí okraje bledým svetlom.
     if (flash > 0) {
-      ctx.fillStyle = `rgba(210,200,230,${(flash * 0.12).toFixed(3)})`;
-      ctx.fillRect(0, 0, w, h);
+      lit.fillStyle = `rgba(150,150,190,${(flash * 0.07).toFixed(3)})`;
+      lit.fillRect(0, 0, this.w, this.h);
     }
-  }
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(this.lit, 0, 0);
+    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
 
-  /** Krvavý mesiac so žiarou (kreslí sa nad tmou, aby ostal jasný). */
-  private drawMoon(ctx: CanvasRenderingContext2D): void {
-    const { w, h } = this;
-    const mx = w * 0.8;
-    const my = h * 0.2;
-    const mr = Math.min(w, h) * 0.055;
-    const halo = ctx.createRadialGradient(mx, my, mr * 0.8, mx, my, mr * 5);
-    halo.addColorStop(0, 'rgba(230,140,110,0.22)');
-    halo.addColorStop(1, 'rgba(230,140,110,0)');
-    ctx.fillStyle = halo;
-    ctx.fillRect(mx - mr * 5, my - mr * 5, mr * 10, mr * 10);
-    ctx.fillStyle = '#e8b4a0';
-    ctx.beginPath();
-    ctx.arc(mx, my, mr, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = 'rgba(160,80,60,0.35)';
-    for (const [dx, dy, r] of [
-      [-0.3, -0.2, 0.2],
-      [0.25, 0.2, 0.14],
-      [0.15, -0.35, 0.1],
-    ] as const) {
+    this.drawDetails(ctx, hx, hy, s, t, flicker);
+    this.drawFlame(ctx, fire.x, fire.y, s, t);
+
+    // Žiara plameňa.
+    const glow = ctx.createRadialGradient(fire.x, fire.y, 0, fire.x, fire.y, 45 * s * flicker);
+    glow.addColorStop(0, 'rgba(255,190,110,0.45)');
+    glow.addColorStop(0.35, 'rgba(255,110,40,0.15)');
+    glow.addColorStop(1, 'rgba(255,90,30,0)');
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = glow;
+    ctx.fillRect(fire.x - 50 * s, fire.y - 50 * s, 100 * s, 100 * s);
+    ctx.globalCompositeOperation = 'source-over';
+
+    // Iskry a dym stúpajú z fakle.
+    for (let i = 0; i < 14; i++) {
+      const life = (t * 0.45 + rand(i, 20)) % 1;
+      const ex = fire.x + Math.sin(t * 1.7 + i * 1.9) * s * 3 + (rand(i, 21) - 0.5) * s * 8;
+      const ey = fire.y - 8 * s - life * s * 55;
+      const g = Math.round(130 + rand(i, 22) * 90);
+      ctx.fillStyle = `rgba(255,${g},70,${((1 - life) * 0.85).toFixed(2)})`;
       ctx.beginPath();
-      ctx.arc(mx + dx * mr, my + dy * mr, r * mr, 0, Math.PI * 2);
+      ctx.arc(ex, ey, Math.max(0.7, s * 0.45 * (1 - life * 0.5)), 0, Math.PI * 2);
       ctx.fill();
     }
+
+    // Dážď (pri plameni sa kvapky zalesknú).
+    ctx.lineWidth = 1;
+    for (const d of this.rain) {
+      const ry = ((d.y + t * d.speed) % 1) * (h + 40) - 20;
+      const rx = (d.x * (w + 60) - ry * 0.18 + w + 60) % (w + 60);
+      const near = Math.hypot(rx - fire.x, ry - fire.y) < 40 * s;
+      ctx.strokeStyle = near ? 'rgba(255,180,120,0.45)' : 'rgba(180,170,190,0.14)';
+      ctx.beginPath();
+      ctx.moveTo(rx, ry);
+      ctx.lineTo(rx - 3.5, ry + 18);
+      ctx.stroke();
+    }
+
+    if (flash > 0) {
+      ctx.fillStyle = `rgba(200,195,230,${(flash * 0.1).toFixed(3)})`;
+      ctx.fillRect(0, 0, w, h);
+    }
+    // Vineta, ktorá pomaly pulzuje ako tlkot srdca.
+    const beat = Math.max(0, Math.sin(t * 2.4)) ** 8 + Math.max(0, Math.sin(t * 2.4 - 0.5)) ** 8;
+    const vig = ctx.createRadialGradient(
+      w / 2,
+      h / 2,
+      Math.min(w, h) * 0.35,
+      w / 2,
+      h / 2,
+      Math.max(w, h) * 0.75,
+    );
+    vig.addColorStop(0, 'rgba(0,0,0,0)');
+    vig.addColorStop(1, `rgba(40,0,0,${(0.35 + beat * 0.12).toFixed(3)})`);
+    ctx.fillStyle = vig;
+    ctx.fillRect(0, 0, w, h);
   }
 
-  /** Lekár (ten istý tvar ako v hre); s = mierka. */
-  private drawHero(
+  /** Šev na zobáku, okraj klobúka a sklo masky, v ktorom sa odráža plameň. */
+  private drawDetails(
     ctx: CanvasRenderingContext2D,
-    x: number,
-    y: number,
+    hx: number,
+    hy: number,
     s: number,
     t: number,
-    dy: number,
+    flicker: number,
   ): void {
     ctx.save();
-    ctx.translate(x - 7 * s, y - 15.4 * s);
+    ctx.translate(hx, hy);
     ctx.scale(s, s);
-    drawDoctor(ctx, {
-      legs: [
-        [5.9, 0],
-        [7.4, 0],
-      ],
-      legEnd: 15.4,
-      dy,
-      wave: Math.sin(t * 1.7) * 0.6 + 0.3,
-    });
+    // Prešívaný šev pozdĺž zobáka, chytá svetlo zdola.
+    ctx.strokeStyle = 'rgba(255,140,70,0.35)';
+    ctx.lineWidth = 0.5;
+    ctx.setLineDash([1.6, 1.4]);
+    ctx.beginPath();
+    ctx.moveTo(-10, 3);
+    ctx.quadraticCurveTo(-34, 4, -57, 21.5);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // Remienok masky okolo hlavy.
+    ctx.strokeStyle = 'rgba(255,130,60,0.22)';
+    ctx.lineWidth = 0.9;
+    ctx.beginPath();
+    ctx.moveTo(-8, 9);
+    ctx.quadraticCurveTo(4, 12, 13, 4);
+    ctx.stroke();
+    // Sklo: tmavý rám a v ňom odraz ohňa.
+    ctx.fillStyle = '#1a0c08';
+    ctx.beginPath();
+    ctx.arc(-7, -1, 5.4, 0, Math.PI * 2);
+    ctx.fill();
+    const glass = ctx.createRadialGradient(-8.2, 0.5, 0.3, -7, -1, 4.3);
+    const a = 0.75 + (flicker - 1) * 3;
+    glass.addColorStop(0, `rgba(255,230,160,${a.toFixed(2)})`);
+    glass.addColorStop(0.5, `rgba(230,110,40,${(a * 0.8).toFixed(2)})`);
+    glass.addColorStop(1, 'rgba(90,20,10,0.9)');
+    ctx.fillStyle = glass;
+    ctx.beginPath();
+    ctx.arc(-7, -1, 4.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowColor = '#ff8a3a';
+    ctx.shadowBlur = 14;
+    ctx.fillStyle = 'rgba(255,245,220,0.9)';
+    ctx.beginPath();
+    ctx.arc(-8.6 + Math.sin(t * 9) * 0.25, 0.8, 0.9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    // Kvapky stekajúce zo strechy klobúka.
+    ctx.fillStyle = 'rgba(200,190,210,0.5)';
+    for (let i = 0; i < 4; i++) {
+      const dx = -36 + i * 9 + rand(i, 40) * 4;
+      const fall = ((t * 0.9 + rand(i, 41)) % 1) * 40;
+      ctx.beginPath();
+      ctx.ellipse(dx, -8 + fall, 0.45, 1.1, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.restore();
   }
 
-  /** Plameň fakle: tri vrstvy, ktoré sa vlnia. */
+  /** Nakazení stoja v uliciach; vidno ich len pri blesku. */
+  private drawCrowd(ctx: CanvasRenderingContext2D, flash: number): void {
+    const { w, h } = this;
+    const base = h * 0.86;
+    ctx.fillStyle = `rgba(0,0,0,${Math.min(1, flash * 1.4).toFixed(2)})`;
+    for (let i = 0; i < 14; i++) {
+      const x = w * (0.02 + rand(i, 50) * 0.5);
+      const sc = h * (0.05 + rand(i, 51) * 0.05);
+      ctx.save();
+      ctx.translate(x, base + rand(i, 52) * h * 0.06);
+      ctx.scale(sc / 17, sc / 17);
+      // Zhrbená postava s ovisnutými rukami.
+      ctx.beginPath();
+      ctx.moveTo(-3, 0);
+      ctx.lineTo(-2.4, -8);
+      ctx.quadraticCurveTo(-2, -14, 2, -13);
+      ctx.quadraticCurveTo(4, -11, 3.4, -6);
+      ctx.lineTo(3, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(3.6, -13.2, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillRect(3, -10, 1.1, 7);
+      ctx.restore();
+    }
+  }
+
+  /** Veľký plameň fakle: tri vrstvy, ktoré sa vlnia. */
   private drawFlame(
     ctx: CanvasRenderingContext2D,
     x: number,
@@ -373,19 +484,26 @@ export class TitleScene {
     t: number,
   ): void {
     const layers: [number, number, string][] = [
-      [1.5, 4.4, '#ff7a2a'],
-      [1.05, 3.3, '#ffc24a'],
-      [0.6, 2.1, '#fff0c0'],
+      [4.6, 15, '#ff6a20'],
+      [3.2, 11, '#ffb040'],
+      [1.8, 6.5, '#fff0c0'],
     ];
-    for (const [w, h, color] of layers) {
-      const tip = Math.sin(t * 9 + w * 3) * 0.5;
-      const top = y - h * (1 + Math.sin(t * 13 + w) * 0.08) * s;
-      const bottom = y + 0.3 * s;
+    for (const [fw, fh, color] of layers) {
+      const tip = Math.sin(t * 8 + fw * 3) * 1.6;
+      const top = y - fh * (1 + Math.sin(t * 12 + fw) * 0.1) * s;
+      const bottom = y + 1.5 * s;
       ctx.fillStyle = color;
       ctx.beginPath();
       ctx.moveTo(x + tip * s, top);
-      ctx.bezierCurveTo(x + w * s, (top + bottom) / 2, x + w * 0.95 * s, bottom, x, bottom);
-      ctx.bezierCurveTo(x - w * 0.95 * s, bottom, x - w * s, (top + bottom) / 2, x + tip * s, top);
+      ctx.bezierCurveTo(x + fw * s, (top + bottom) / 2, x + fw * 0.95 * s, bottom, x, bottom);
+      ctx.bezierCurveTo(
+        x - fw * 0.95 * s,
+        bottom,
+        x - fw * s,
+        (top + bottom) / 2,
+        x + tip * s,
+        top,
+      );
       ctx.fill();
     }
   }
