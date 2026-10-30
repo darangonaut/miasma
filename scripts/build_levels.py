@@ -62,7 +62,7 @@ a.ground(17, 19, top=10)
 a.water(27, 29); a.put(28, 9, 'f')
 a.ground(30, 60); a.put(33, 10, 'L'); a.put(35, 11, '3'); a.put(38, 11, '4'); a.plat(41, 42, 11, '^')
 a.put(46, 11, '5'); a.put(55, 11, 'g')
-a.ground(61, 64, top=10); a.ground(65, 70, top=8); a.plat(66, 68, 4); a.put(67, 3, '*')
+a.ground(61, 64, top=10); a.ground(65, 70, top=8); a.plat(66, 68, 5); a.put(67, 4, '*')
 a.many([(62, 9), (66, 7)], 'f')
 a.ground(71, 111); a.put(80, 11, 'g'); a.plat(87, 88, 11, '^'); a.put(84, 11, 'f')
 a.put(99, 11, '6'); a.put(106, 11, 'E')
@@ -80,7 +80,7 @@ b.ground(51, 63, top=9); b.put(57, 8, 'g'); b.put(55, 4, 's'); b.plat(62, 62, 9,
 b.ground(66, 79, top=4); b.put(69, 3, 'f'); b.plat(73, 74, 3, '^')
 b.plat(82, 83, 7, 'c'); b.plat(86, 87, 9, 'c'); b.put(86, 8, 'f')
 b.ground(90, 117, top=10); b.put(93, 9, 'L'); b.put(100, 9, 'g'); b.plat(104, 105, 9, '^')
-b.plat(107, 109, 6); b.put(108, 5, '*'); b.put(111, 5, 's'); b.put(113, 9, 'E')
+b.plat(107, 109, 7); b.put(108, 6, '*'); b.put(111, 5, 's'); b.put(113, 9, 'E')
 levels.append(('quarter', 'quarter-2', 'level2', ['hintAwning', 'hintPlanks'], b))
 
 # 3 — Prízraky (rozžiarenie fakle, hod iskry)
@@ -89,13 +89,13 @@ c.ground(0, 28); c.put(1, 11, 'P'); c.put(5, 11, '1'); c.put(17, 7, 's'); c.many
 c.put(24, 11, '2')
 c.water(29, 32)
 c.ground(33, 54); c.put(36, 10, 'L'); c.put(42, 6, 's'); c.put(49, 7, 's'); c.plat(45, 46, 11, '^')
-c.plat(39, 41, 8); c.put(40, 7, 'f')
+c.plat(39, 41, 9); c.put(40, 8, 'f')
 c.ground(55, 58, top=10); c.ground(59, 63, top=8); c.put(61, 7, 'f')
 c.plat(64, 69, 8, 'c'); c.put(67, 4, 's')
 c.ground(70, 82, top=9); c.put(77, 8, 'g'); c.put(73, 8, 'f')
 c.water(83, 86)
 c.ground(87, 115); c.put(90, 10, 'L'); c.put(97, 6, 's'); c.put(104, 11, 'g'); c.plat(100, 101, 11, '^')
-c.put(108, 5, 's'); c.plat(94, 96, 7); c.put(95, 6, '*'); c.put(111, 11, 'E')
+c.put(108, 5, 's'); c.plat(94, 96, 9); c.put(95, 8, '*'); c.put(111, 11, 'E')
 levels.append(('quarter', 'quarter-3', 'level3', ['hintWraith', 'hintFlare'], c))
 
 # 4 — Šibeničné námestie
@@ -106,7 +106,7 @@ d.plat(28, 33, 8, 'c'); d.put(31, 7, 'f')
 d.ground(34, 40, top=8); d.plat(41, 42, 8, '^'); d.ground(43, 46, top=8); d.put(45, 7, 'L')
 d.water(47, 51)
 d.ground(52, 77); d.put(58, 11, 'g'); d.put(66, 11, 'g'); d.put(62, 6, 's'); d.plat(70, 71, 11, '^')
-d.plat(60, 62, 8); d.put(61, 7, 'f'); d.plat(75, 75, 12, 'b')
+d.plat(60, 62, 9); d.put(61, 8, 'f'); d.plat(75, 75, 12, 'b')
 d.ground(78, 88, top=7); d.put(82, 6, 'f'); d.put(86, 6, 'g')
 d.plat(89, 94, 7, 'c'); d.put(92, 3, 's')
 d.ground(95, 100, top=7); d.put(97, 6, 'L')
@@ -144,7 +144,7 @@ f.many([(54, 6), (58, 5)], 'm'); f.many([(52, 8), (60, 8)], 'f')
 f.ground(63, 80, top=9); f.put(66, 8, 'L'); f.put(73, 8, 'g'); f.put(77, 4, 's')
 f.water(81, 86); f.plat(83, 84, 10, 'i')
 f.ground(87, 115); f.many([(92, 9), (97, 7)], 'm'); f.put(101, 6, 's'); f.put(104, 11, 'g')
-f.plat(94, 96, 8); f.put(95, 7, '*'); f.put(99, 11, 'f'); f.put(111, 11, 'E')
+f.plat(94, 96, 9); f.put(95, 8, '*'); f.put(99, 11, 'f'); f.put(111, 11, 'E')
 levels.append(('catacombs', 'catacombs-2', 'level6', ['hintFlies'], f))
 
 # 7 — Stoky
@@ -182,7 +182,7 @@ h.many([(79, 8), (81, 8), (83, 8), (85, 8), (87, 8), (89, 8)], 'v'); h.put(84, 1
 h.put(93, 10, 'L'); h.plat(91, 92, 11, '^')
 h.water(97, 102); h.plat(99, 100, 11, 'c')
 h.ground(103, 125); h.many([(108, 9), (112, 8)], 'm'); h.put(115, 6, 's'); h.put(110, 11, 'g')
-h.plat(105, 107, 8); h.put(106, 7, '*'); h.put(120, 11, 'E')
+h.plat(105, 107, 9); h.put(106, 8, '*'); h.put(120, 11, 'E')
 levels.append(('catacombs', 'catacombs-4', 'level8', [], h))
 
 # ===== Svet 3: Morové jamy (otvorený cintorín: vietor v nárazoch, blesky, veľké prízraky) =====
@@ -232,7 +232,7 @@ c.plat(80, 83, 9, 'c')
 c.ground(85, 98, top=10); c.put(89, 9, 'L'); c.plat(92, 92, 9, '#'); c.put(95, 9, 'g')
 c.water(99, 103); c.plat(101, 101, 11, 'c')
 c.ground(104, 125); c.plat(108, 108, 11, '#'); c.put(112, 6, 'S'); c.plat(115, 116, 11, '^')
-c.plat(117, 119, 8); c.put(118, 7, '*'); c.put(110, 11, 'f'); c.put(121, 11, 'E')
+c.plat(117, 119, 9); c.put(118, 8, '*'); c.put(110, 11, 'f'); c.put(121, 11, 'E')
 levels.append(('pits', 'pits-3', 'level11', [], c))
 
 # 12 — Jama
@@ -248,7 +248,7 @@ d.ground(70, 83, top=10); d.put(72, 9, 'f'); d.put(77, 5, 'S'); d.put(75, 9, 'g'
 d.ground(85, 92, top=5); d.put(87, 4, 'L'); d.plat(91, 91, 4, '#')
 d.plat(94, 95, 9, 'c'); d.plat(98, 99, 11, 'c')
 d.ground(102, 133); d.plat(106, 106, 11, '#'); d.put(110, 11, 'g'); d.put(114, 6, 'S'); d.plat(118, 119, 11, '^')
-d.put(122, 6, 'S'); d.plat(123, 124, 8); d.put(123, 7, '*'); d.put(112, 11, 'f'); d.put(129, 11, 'E')
+d.put(122, 6, 'S'); d.plat(123, 124, 9); d.put(123, 8, '*'); d.put(112, 11, 'f'); d.put(129, 11, 'E')
 levels.append(('pits', 'pits-4', 'level12', [], d))
 
 # ===== Svet 4: Katedrála (visiace plošiny, padajúce murivo, všetko dokopy) =====
@@ -263,7 +263,7 @@ i.ground(52, 64); i.ground(53, 63, top=5, bottom=7); i.many([(54, 8), (56, 8), (
 i.put(59, 11, 'f')
 i.ground(65, 75, top=10); i.put(72, 6, 's'); i.put(70, 9, 'g')
 i.put(76, 10, 'H'); i.put(79, 7, 'f')
-i.ground(82, 96, top=10); i.plat(85, 87, 6); i.put(86, 5, '*'); i.put(91, 6, 'S'); i.plat(89, 89, 9, '^')
+i.ground(82, 96, top=10); i.plat(85, 87, 7); i.put(86, 6, '*'); i.put(91, 6, 'S'); i.plat(89, 89, 9, '^')
 i.ground(97, 117); i.put(100, 10, 'L'); i.put(106, 11, 'g'); i.put(113, 11, 'E')
 levels.append(('cathedral', 'cathedral-1', 'level13', ['hintMover'], i))
 
@@ -320,7 +320,7 @@ q.put(87, 7, 'H')
 q.ground(93, 100, top=7); q.put(96, 6, 'L')
 q.ground(101, 139); q.plat(104, 110, 12, 'i'); q.ground(112, 124, top=5, bottom=7)
 q.many([(113, 8), (116, 8), (119, 8), (122, 8)], 'v'); q.put(108, 6, 'S'); q.put(118, 11, 'g'); q.put(127, 6, 's')
-q.put(130, 9, 'm'); q.plat(128, 130, 8, '-'); q.put(129, 7, '*'); q.put(106, 11, 'f'); q.put(135, 11, 'E')
+q.put(126, 7, 'm'); q.plat(128, 130, 9, '-'); q.put(129, 8, '*'); q.put(106, 11, 'f'); q.put(135, 11, 'E')
 levels.append(('cathedral', 'cathedral-4', 'level16', [], q))
 
 

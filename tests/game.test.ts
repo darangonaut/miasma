@@ -11,7 +11,7 @@ import {
   windAt,
   type Input,
 } from '@/game/game';
-import { TILE, isGround, parseLevel, type LevelDef } from '@/game/level';
+import { TILE, Tile, isGround, parseLevel, type LevelDef } from '@/game/level';
 import { LEVELS } from '@/game/levels';
 
 const DT = 1 / 60;
@@ -47,6 +47,31 @@ describe('levely', () => {
         while (row < level.height && !isGround(level.tiles[row * level.width + col]!)) row++;
         expect(row, `${def.id} lampa na stĺpci ${col}`).toBeLessThan(level.height);
       }
+    }
+  });
+
+  it('na každý trám sa dá vyskočiť (pod ním je zem najviac 3 políčka nižšie)', () => {
+    for (const def of LEVELS) {
+      const level = parseLevel(def);
+      const at = (c: number, r: number) => level.tiles[r * level.width + c];
+      const standable = (c: number, r: number) =>
+        c >= 0 &&
+        c < level.width &&
+        r < level.height &&
+        at(c, r) !== Tile.Empty &&
+        at(c, r) !== Tile.Water &&
+        at(c, r) !== Tile.Thorns &&
+        (r === 0 || at(c, r - 1) === Tile.Empty);
+      for (let r = 0; r < level.height; r++)
+        for (let c = 0; c < level.width; c++) {
+          if (at(c, r) !== Tile.Ledge || at(c - 1, r) === Tile.Ledge) continue;
+          let end = c;
+          while (at(end + 1, r) === Tile.Ledge) end++;
+          let ok = false;
+          for (let cc = c - 4; cc <= end + 4 && !ok; cc++)
+            for (let rr = r + 1; rr <= r + 3 && !ok; rr++) ok = standable(cc, rr);
+          expect(ok, `${def.id}: trám ${c}–${end} v riadku ${r}`).toBe(true);
+        }
     }
   });
 
