@@ -633,6 +633,39 @@ function nest(ash: boolean): Texture {
   });
 }
 
+/** Preživší: kľačiaca postava v plachte so zopnutými rukami; chodidlá na y = 14. */
+function survivor(): Texture {
+  return paint(12, 15, (ctx) => {
+    ctx.fillStyle = INK_CSS;
+    ctx.strokeStyle = INK_CSS;
+    // Kľačiace telo zahalené v plachte.
+    ctx.beginPath();
+    ctx.moveTo(2, 14);
+    ctx.quadraticCurveTo(1.6, 9, 4.4, 6.4);
+    ctx.lineTo(7.4, 6.2);
+    ctx.quadraticCurveTo(9, 9, 8.6, 11);
+    ctx.lineTo(10.6, 14);
+    ctx.closePath();
+    ctx.fill();
+    // Hlava sklonená, kapucňa.
+    circle(ctx, 6.4, 4.6, 1.9);
+    // Zopnuté ruky zdvihnuté k lekárovi.
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(7, 7.6);
+    ctx.quadraticCurveTo(9.4, 7.4, 10, 5.4);
+    ctx.stroke();
+    // Morové škvrny na plachte (bledé).
+    ctx.fillStyle = '#c8bca0';
+    for (const [x, y] of [
+      [4, 10.5],
+      [6.4, 12.4],
+      [3.4, 12.8],
+    ] as const)
+      circle(ctx, x, y, 0.45);
+  });
+}
+
 /** Liečivé byliny: zväzok bledozelených lístkov, slabo žiari. */
 function herb(): Texture {
   return paint(9, 10, (ctx) => {
@@ -1353,6 +1386,7 @@ export const vectorArt: Art = {
   sign,
   lightTile,
   rat,
+  survivor,
   nest,
   cane,
   spark,

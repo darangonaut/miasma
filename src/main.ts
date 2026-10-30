@@ -12,6 +12,7 @@ import {
   BELL_WARN,
   DREAD_LIMIT,
   Game,
+  HERB_MAX,
   OIL_MAX,
   type GameEvent,
 } from './game/game';
@@ -289,7 +290,9 @@ const DEATHS: Record<string, Key> = {
 
 function finishLevel(g: Game): void {
   const def = LEVELS[levelIndex]!;
-  writeSave(recordLevel(readSave(), levelIndex, def.id, g.fireflyCount, g.crystalCount));
+  writeSave(
+    recordLevel(readSave(), levelIndex, def.id, g.fireflyCount, g.crystalCount, g.savedCount),
+  );
   $('.done-level').textContent = levelName(levelIndex);
   $('.done-stats').textContent = t('stats', {
     f: g.fireflyCount,
@@ -345,6 +348,10 @@ function onEvents(events: GameEvent[]): void {
       window.setTimeout(() => (hurt.style.opacity = '0'), 160);
     } else if (e.type === 'died') {
       showToast(t(DEATHS[e.cause]!));
+    } else if (e.type === 'saved') {
+      showToast(t('savedToast'));
+    } else if (e.type === 'turned') {
+      showToast(t('turnedToast'));
     } else if (e.type === 'gateLocked') {
       showToast(t('gateLocked', { n: e.left }));
     } else if (e.type === 'nestBurnt') {
@@ -370,6 +377,8 @@ function updateHud(g: Game): void {
   }
   $('.nests').textContent = g.nests.length ? `♨ ${g.nestsBurnt}/${g.nests.length}` : '';
   $('.fireflies').textContent = `✶ ${g.fireflyCount}/${g.fireflies.length}`;
+  $('.herbs').textContent = `❦ ${g.herbsCarried}/${HERB_MAX}`;
+  $('.herb-btn').classList.toggle('empty', g.herbsCarried === 0);
   $('.crystals').textContent = g.crystals.length ? `✝ ${g.crystalCount}/${g.crystals.length}` : '';
   // Morový zvon: pásik sa plní do ďalšieho úderu, pri besnení sa vyprázdňuje.
   const bell = $('.bell');

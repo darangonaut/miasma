@@ -20,6 +20,8 @@ export interface Input {
   spark: boolean;
   /** Úder palicou. */
   cane: boolean;
+  /** Použiť bylinu (pri preživšom ju dá jemu). */
+  herb: boolean;
 }
 
 export const NO_INPUT: Input = {
@@ -30,6 +32,7 @@ export const NO_INPUT: Input = {
   flare: false,
   spark: false,
   cane: false,
+  herb: false,
 };
 
 // --- Pohyb (px, s) ---
@@ -72,6 +75,11 @@ const BARRICADE_SPREAD = 0.35;
 export const BARRICADE_LIGHT = 46;
 // --- Morové hniezda: kopy tiel a slamy, ktoré treba spáliť ---
 const NEST_BURN = 2.6;
+// --- Byliny a preživší ---
+/** Koľko bylín unesie lekár. */
+export const HERB_MAX = 3;
+/** Ako blízko musí byť preživší, aby mu dal bylinu (a aby sa ukázala prosba). */
+const SURVIVOR_REACH = 18;
 export const NEST_LIGHT = 52;
 export const OIL_DRAIN = 3;
 export const FLARE_DRAIN = 20;
@@ -229,6 +237,9 @@ export type GameEvent =
   | { type: 'ignite'; x: number; y: number }
   | { type: 'burnt'; x: number; y: number }
   | { type: 'herb'; x: number; y: number }
+  | { type: 'cure' }
+  | { type: 'saved'; x: number; y: number }
+  | { type: 'turned'; x: number; y: number }
   | { type: 'shield'; on: boolean }
   | { type: 'fogBurn'; x: number; y: number }
   | { type: 'gust'; dir: number }
@@ -356,6 +367,13 @@ export interface Barricade {
   timer: number;
 }
 
+/** Preživší: kľačí a prosí o bylinu; y sú chodidlá. */
+export interface Survivor extends Point {
+  state: 'waiting' | 'saved' | 'turned';
+  /** Čas od záchrany (pre animáciu, keď odchádza). */
+  timer: number;
+}
+
 export interface Nest extends Point {
   state: 'intact' | 'burning' | 'ash';
   timer: number;
@@ -404,6 +422,10 @@ export class Game {
   private barricadeAt = new Map<number, Barricade>();
   readonly herbs: Pickup[];
   readonly nests: Nest[];
+  readonly survivors: Survivor[];
+  /** Byliny v brašne. */
+  herbsCarried = 0;
+  private herbHeld = false;
   /** Hráč stojí pri zatvorenej hranici (aby sa upozornenie neopakovalo). */
   private atGate = false;
   /** Hustota miazmy po políčkach (0–1) a jej pôvodná hodnota (dorastá späť). */
@@ -543,6 +565,12 @@ export class Game {
     });
     this.herbs = level.herbs.map((p) => ({ ...p, taken: false }));
     this.nests = level.nests.map((p) => ({ ...p, state: 'intact', timer: 0 }));
+    this.survivors = level.survivors.map((p) => ({
+      x: p.x,
+      y: p.y + TILE / 2,
+      state: 'waiting',
+      timer: 0,
+    }));
     this.fog = new Float32Array(level.width * level.height);
     for (const f of level.fog) this.fog[f.row * level.width + f.col] = 1;
     this.fogHome = this.fog.slice();
@@ -583,6 +611,10 @@ export class Game {
 
   get fireflyCount(): number {
     return this.fireflies.filter((f) => f.taken).length;
+  }
+
+  get savedCount(): number {
+    return this.survivors.filter((s) => s.state === 'saved').length;
   }
 
   get nestsBurnt(): number {
@@ -654,6 +686,8 @@ export class Game {
     this.throwSpark(dt, input);
     this.updateSparks(dt);
     this.swingCane(dt, input);
+    this.useHerb(input);
+    for (const s of this.survivors) if (s.state === 'saved') s.timer += dt;
     if (this.state === 'play') this.updateShades(dt);
     if (this.state === 'play') this.updateRats(dt);
     if (this.state === 'play') this.updateGhouls(dt);
@@ -684,6 +718,37 @@ export class Game {
     }
   }
 
+  /** Preživší, ku ktorému hráč práve stojí (čaká na pomoc). */
+  get nearSurvivor(): Survivor | null {
+    const c = this.center;
+    return (
+      this.survivors.find(
+        (s) =>
+          s.state === 'waiting' &&
+          Math.abs(s.x - c.x) < SURVIVOR_REACH &&
+          Math.abs(s.y - (this.player.y + PLAYER_H)) < 12,
+      ) ?? null
+    );
+  }
+
+  /** Bylina: pri preživšom ho zachráni, inak vylieči lekára. */
+  private useHerb(input: Input): void {
+    const pressed = input.herb && !this.herbHeld;
+    this.herbHeld = input.herb;
+    if (!pressed || this.herbsCarried <= 0 || this.state !== 'play') return;
+    const s = this.nearSurvivor;
+    if (s) {
+      s.state = 'saved';
+      s.timer = 0;
+      this.herbsCarried--;
+      this.events.push({ type: 'saved', x: s.x, y: s.y - 8 });
+    } else if (this.infection > 0.02) {
+      this.infection = 0;
+      this.herbsCarried--;
+      this.events.push({ type: 'cure' });
+    }
+  }
+
   /** Morový zvon: varovanie, úder a po ňom besnenie nakazených. */
   private updateBell(dt: number): void {
     const before = this.nextBell - (this.time - dt);
@@ -695,6 +760,27 @@ export class Game {
     this.frenzy = BELL_FRENZY;
     this.events.push({ type: 'bell' });
     const c = this.center;
+    // Preživší, ktorým nikto nepomohol, sa pri zvone premenia na nakazených.
+    for (const s of this.survivors) {
+      if (s.state !== 'waiting' || Math.hypot(s.x - c.x, s.y - 8 - c.y) > BELL_RANGE) continue;
+      s.state = 'turned';
+      this.events.push({ type: 'turned', x: s.x, y: s.y - 8 });
+      this.ghouls.push({
+        x: s.x,
+        y: s.y,
+        home: { x: s.x, y: s.y },
+        dir: c.x < s.x ? -1 : 1,
+        vx: 0,
+        alive: true,
+        chasing: false,
+        hp: 1,
+        burning: false,
+        step: 0,
+        lure: c.x,
+        lureTime: BELL_FRENZY,
+        knock: 0,
+      });
+    }
     for (const g of this.ghouls) {
       if (!g.alive || Math.hypot(g.x - c.x, g.y - 8 - c.y) > BELL_RANGE) continue;
       g.lure = c.x;
@@ -1566,8 +1652,10 @@ export class Game {
     }
     for (const hb of this.herbs) {
       if (hb.taken || !near(hb, 13)) continue;
+      // Plnú brašňu nechá ležať.
+      if (this.herbsCarried >= HERB_MAX) continue;
       hb.taken = true;
-      this.infection = 0;
+      this.herbsCarried++;
       this.events.push({ type: 'herb', x: hb.x, y: hb.y });
     }
     for (const k of this.crystals) {
@@ -1596,7 +1684,14 @@ export class Game {
       this.player.vx = 0;
       this.events.push({ type: 'exit' });
     }
-    this.sign = this.level.signs.find((s) => near(s, 28)) ?? null;
+    const plea = this.nearSurvivor;
+    this.sign = plea
+      ? {
+          x: plea.x,
+          y: plea.y,
+          hint: this.herbsCarried > 0 ? 'hintSurvivor' : 'hintSurvivorNoHerb',
+        }
+      : (this.level.signs.find((s) => near(s, 28)) ?? null);
   }
 
   private die(cause: DeathCause): void {

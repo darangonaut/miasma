@@ -595,12 +595,21 @@ def extend(lv, world, id_, diff, extra, hints):
     # Morové hniezda (n): treba ich spáliť, inak sa hranica na konci nezapáli.
     count = 2 + diff // 6
     nests = [old + extra * (k + 1) // (count + 1) - 3 for k in range(count)]
+    # Preživší (u) prosí o bylinu; tesne pred ním leží jedna (zachrániť jeho, alebo seba?).
+    souls = [old + extra * (2 * k + 1) // (2 * (1 + diff // 8) + 1) for k in range(1 + diff // 8)]
     last = None
     while g.x < old + extra:
         kind = rng.choice([k for k in pool if k != last])
         last = kind
         g.block(kind)
         g.flat(rng.randint(2, 4))
+        if souls and g.x >= souls[0]:
+            souls.pop(0)
+            g.flat(3, rock=False)
+            g.put(g.x - 2, g.y - 1, 'h')
+            g.flat(6, ember=False, rock=False)
+            g.put(g.x - 2, g.y - 1, 'u')
+            g.flat(3, rock=False)
         if nests and g.x >= nests[0]:
             nests.pop(0)
             g.flat(3, rock=False)
@@ -613,7 +622,7 @@ def extend(lv, world, id_, diff, extra, hints):
             g.flat(2)
             g.put(g.x - 1, g.y - 1, 'L')
             g.flat(3)
-    assert not nests, id_
+    assert not nests and not souls, id_
     g.flat(6, ember=False, rock=False)
     assert g.put(g.x - 3, g.y - 1, 'E'), id_
     lv.w = g.x

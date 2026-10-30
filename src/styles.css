@@ -662,6 +662,20 @@ button.big:hover {
   }
 }
 
+#touch .herb-btn {
+  margin-bottom: 40px;
+  color: #8ac08a;
+}
+
+#touch .herb-btn.empty {
+  opacity: 0.35;
+}
+
+.herbs {
+  margin-left: 10px;
+  color: var(--verdigris);
+}
+
 #touch .shield {
   color: var(--paper-dark);
 }

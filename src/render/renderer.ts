@@ -123,6 +123,7 @@ export class Renderer {
   private crumbleSprites: { sprite: Sprite; col: number; row: number }[] = [];
   private barricadeSprites: { sprite: Sprite; fire: Sprite }[] = [];
   private herbSprites: Sprite[] = [];
+  private survivorSprites: Sprite[] = [];
   private nestSprites: { sprite: Sprite; fire: Sprite[] }[] = [];
   /** Chumáče miazmy: jeden na políčko, mierne sa vlnia. */
   private fogSprites: { sprite: Sprite; index: number; seed: number }[] = [];
@@ -374,6 +375,14 @@ export class Renderer {
       });
       return { sprite, fire };
     });
+    const survivorTex = art.survivor();
+    this.survivorSprites = game.survivors.map((s) => {
+      const sprite = new Sprite(survivorTex);
+      sprite.anchor.set(0.5, 14 / 15);
+      sprite.position.set(s.x, s.y + 0.5);
+      this.actors.addChild(sprite);
+      return sprite;
+    });
     this.herbSprites = game.herbs.map((hb) => {
       const s = new Sprite(this.tex.herb);
       s.anchor.set(0.5);
@@ -567,6 +576,13 @@ export class Renderer {
         case 'nestBurnt':
           this.burst(e.x, e.y, 18, C.shadeInner, 40, false);
           this.burst(e.x, e.y, 10, C.flame, 50, true);
+          break;
+        case 'saved':
+          this.burst(e.x, e.y, 20, 0xfff0d0, 50, true);
+          break;
+        case 'turned':
+          this.shake = 2;
+          this.burst(e.x, e.y, 16, C.plague, 45, true);
           break;
         case 'herb':
           this.burst(e.x, e.y, 14, 0xc8f0a0, 50, true);
@@ -885,6 +901,28 @@ export class Renderer {
     });
     game.movers.forEach((m, i) => this.moverSprites[i]!.position.set(m.x, m.y));
 
+    // Premenení preživší pribudnú ako noví nakazení.
+    while (this.ghoulSprites.length < game.ghouls.length) {
+      const body = new Sprite(this.tex.ghoul[0]);
+      body.anchor.set(0.5, 15.4 / 17);
+      const eyes = new Sprite(this.tex.ghoulEyes);
+      eyes.anchor.set(0.5, 15.4 / 17);
+      this.actors.addChild(body);
+      this.above.addChild(eyes);
+      this.ghoulSprites.push({ body, eyes });
+    }
+    game.survivors.forEach((s, i) => {
+      const sprite = this.survivorSprites[i]!;
+      sprite.visible = s.state !== 'turned' && s.timer < 3;
+      // Zachránený vstane a odchádza do tmy; čakajúci sa trasie a kašle.
+      if (s.state === 'saved') {
+        sprite.scale.set(-1, 1 + Math.min(0.25, s.timer * 0.5));
+        sprite.x = s.x - s.timer * 14;
+        sprite.alpha = Math.max(0, 1 - s.timer / 3);
+      } else {
+        sprite.x = s.x + (Math.floor(t * 2 + i) % 5 === 0 ? Math.sin(t * 40) * 0.4 : 0);
+      }
+    });
     game.ghouls.forEach((g, i) => {
       const { body, eyes } = this.ghoulSprites[i]!;
       body.visible = eyes.visible = g.alive;

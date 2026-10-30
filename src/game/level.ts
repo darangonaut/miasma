@@ -15,6 +15,7 @@
  *   ~  oblak miazmy (nakazí; rozžiarená fakľa ho spáli)
  *   h  liečivé byliny (vyliečia nákazu)
  *   n  morové hniezdo (treba spáliť, inak sa hranica nezapáli)
+ *   u  preživší (prosí o bylinu; bez nej sa pri zvone premení)
  *   H  visiaca plošina ↔    V  visiaca plošina ↕ (2 políčka široká, 4 políčka dráha)
  *   1–9  odkaz na stene s radou
  */
@@ -80,6 +81,7 @@ export interface Level {
   ghouls: Point[];
   herbs: Point[];
   nests: Point[];
+  survivors: Point[];
   /** Políčka s miazmou (stĺpec, riadok). */
   fog: { col: number; row: number }[];
   icicles: Point[];
@@ -126,6 +128,7 @@ export function parseLevel(def: LevelDef): Level {
     ghouls: [],
     herbs: [],
     nests: [],
+    survivors: [],
     fog: [],
     icicles: [],
     movers: [],
@@ -154,6 +157,7 @@ export function parseLevel(def: LevelDef): Level {
       else if (ch === 'g') level.ghouls.push(c);
       else if (ch === 'h') level.herbs.push(c);
       else if (ch === 'n') level.nests.push(c);
+      else if (ch === 'u') level.survivors.push(c);
       else if (ch === '~') level.fog.push({ col: x, row: y });
       else if (ch === 'S') level.bigShades.push(c);
       else if (ch === 'v') level.icicles.push(c);

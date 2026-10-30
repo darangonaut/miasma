@@ -209,7 +209,7 @@ describe('uloženie', () => {
     save = recordLevel(save, 0, 'a', 5, 1);
     save = recordLevel(save, 0, 'a', 3, 0);
     expect(save.unlocked).toBe(1);
-    expect(save.best.a).toEqual({ fireflies: 5, crystals: 1 });
+    expect(save.best.a).toEqual({ fireflies: 5, crystals: 1, survivors: 0 });
     expect(parseSave(JSON.stringify(save))).toEqual(save);
     expect(parseSave('nezmysel').unlocked).toBe(0);
   });
@@ -541,7 +541,12 @@ describe('nové svety', () => {
     const herb = make([' P  h        E', '#############']);
     herb.infection = 0.8;
     run(herb, 1.5, { right: true });
+    expect(herb.herbsCarried).toBe(1);
+    herb.infection = 0.8;
+    const cure = [...herb.step(DT, { ...NO_INPUT, herb: true }), ...run(herb, 0.1)];
+    expect(cure.some((e) => e.type === 'cure')).toBe(true);
     expect(herb.infection).toBe(0);
+    expect(herb.herbsCarried).toBe(0);
 
     const burn = make(rows);
     run(burn, 1.5, { flare: true });
@@ -620,6 +625,28 @@ describe('nové svety', () => {
     expect(fire.nestsBurnt).toBe(1);
     run(fire, 4, { right: true });
     expect(fire.state).toBe('done');
+  });
+
+  it('preživší: bylina ho zachráni, opustený sa pri zvone premení na nakazeného', () => {
+    const rows = [' P h    u          E', '####################'];
+    const kind = make(rows);
+    run(kind, 1.3, { right: true });
+    run(kind, 0.3);
+    expect(kind.herbsCarried).toBe(1);
+    expect(kind.nearSurvivor).not.toBeNull();
+    expect(kind.sign?.hint).toBe('hintSurvivor');
+    const ev = [...kind.step(DT, { ...NO_INPUT, herb: true }), ...run(kind, 0.1)];
+    expect(ev.some((e) => e.type === 'saved')).toBe(true);
+    expect(kind.savedCount).toBe(1);
+    expect(kind.herbsCarried).toBe(0);
+
+    const cold = make(rows);
+    cold.nextBell = 1;
+    const ghouls = cold.ghouls.length;
+    const bell = run(cold, 1.2);
+    expect(bell.some((e) => e.type === 'turned')).toBe(true);
+    expect(cold.ghouls.length).toBe(ghouls + 1);
+    expect(cold.survivors[0]!.state).toBe('turned');
   });
 
   it('mimo cintorína nefúka', () => {

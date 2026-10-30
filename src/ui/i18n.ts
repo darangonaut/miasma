@@ -7,8 +7,8 @@ const en = {
   newGame: 'New game',
   newGameConfirm: 'Sure? Progress will be lost',
   controlsDesktop:
-    '← → / A D move · Space / ↑ jump · V / E cane · C / F spark · Shift / X flare the torch · ↓ / S hide the torch · Esc pause',
-  controlsTouch: 'Arrows move · ⤒ jump · ⚚ cane · ✸ spark · ✦ flare · ◐ hide the torch',
+    '← → / A D move · Space / ↑ jump · V / E cane · C / F spark · Shift / X flare the torch · ↓ / S hide the torch · Q use a herb · Esc pause',
+  controlsTouch: 'Arrows move · ⤒ jump · ⚚ cane · ✸ spark · ✦ flare · ◐ hide the torch · ❦ herb',
   world1: 'Quarantine Quarter',
   level1: 'Quarantine',
   level2: 'Rooftops',
@@ -70,10 +70,17 @@ const en = {
   hintShieldTouch:
     'Hold ◐ to hide the torch under your cloak. The infected stop seeing you and wraiths lose your trail — but you move slowly and the darkness creeps in.',
   hintMiasma:
-    'Green miasma infects you. Get through quickly or burn it away with a flared torch. Healing herbs cure the infection.',
+    'Green miasma infects you. Get through quickly or burn it away with a flared torch. Carry healing herbs (up to 3) and use one with Q to cure yourself.',
   diedMiasma: 'The miasma choked you…',
   diedRats: 'The rats ate you alive…',
   oilLow: 'The torch is dying!',
+  hintSurvivor:
+    'A survivor begs for help. Give them a herb (Q) — or keep it for yourself. When the bell tolls, the abandoned turn.',
+  hintSurvivorTouch:
+    'A survivor begs for help. Give them a herb ❦ — or keep it for yourself. When the bell tolls, the abandoned turn.',
+  hintSurvivorNoHerb: 'A survivor begs for help. You have no herb to give…',
+  savedToast: 'You saved a life.',
+  turnedToast: 'No one helped them. They have turned…',
   gateLocked: 'The pyre won’t light — {n} plague nests still smoulder in the quarter (♨).',
   nestsDone: 'All plague nests are burnt. Light the pyre!',
   bellToll: 'The plague bell! The infected pour into the streets — hide the torch (↓).',
@@ -113,8 +120,9 @@ const sk: Record<Key, string> = {
   newGame: 'Nová hra',
   newGameConfirm: 'Naozaj? Postup sa zmaže',
   controlsDesktop:
-    '← → / A D chôdza · Medzerník / ↑ skok · V / E palica · C / F iskra · Shift / X rozžiariť fakľu · ↓ / S ukryť fakľu · Esc pauza',
-  controlsTouch: 'Šípky chôdza · ⤒ skok · ⚚ palica · ✸ iskra · ✦ rozžiariť · ◐ ukryť fakľu',
+    '← → / A D chôdza · Medzerník / ↑ skok · V / E palica · C / F iskra · Shift / X rozžiariť fakľu · ↓ / S ukryť fakľu · Q bylina · Esc pauza',
+  controlsTouch:
+    'Šípky chôdza · ⤒ skok · ⚚ palica · ✸ iskra · ✦ rozžiariť · ◐ ukryť fakľu · ❦ bylina',
   world1: 'Karanténna štvrť',
   level1: 'Karanténa',
   level2: 'Strechy',
@@ -175,10 +183,17 @@ const sk: Record<Key, string> = {
   hintShieldTouch:
     'Podrž ◐ a ukry fakľu pod plášť. Nakazení ťa prestanú vidieť a prízraky stratia stopu — no ideš pomaly a tma sa ti zakráda.',
   hintMiasma:
-    'Zelená miazma ťa nakazí. Prejdi rýchlo alebo ju spáľ rozžiarenou fakľou. Liečivé byliny nákazu vyliečia.',
+    'Zelená miazma ťa nakazí. Prejdi rýchlo alebo ju spáľ rozžiarenou fakľou. Liečivé byliny nosíš so sebou (najviac 3) a klávesom Q sa vyliečiš.',
   diedMiasma: 'Udusila ťa miazma…',
   diedRats: 'Zožrali ťa potkany…',
   oilLow: 'Fakľa dohára!',
+  hintSurvivor:
+    'Preživší prosí o pomoc. Daj mu bylinu (Q) — alebo si ju nechaj. Keď udrie zvon, opustení sa premenia.',
+  hintSurvivorTouch:
+    'Preživší prosí o pomoc. Daj mu bylinu ❦ — alebo si ju nechaj. Keď udrie zvon, opustení sa premenia.',
+  hintSurvivorNoHerb: 'Preživší prosí o pomoc. Nemáš bylinu, ktorú by si mu dal…',
+  savedToast: 'Zachránil si život.',
+  turnedToast: 'Nikto mu nepomohol. Premenil sa…',
   gateLocked: 'Hranica sa nezapáli — v štvrti ešte tlie morových hniezd: {n} (♨).',
   nestsDone: 'Všetky morové hniezda zhoreli. Zapáľ hranicu!',
   bellToll: 'Morový zvon! Nakazení sa vyrojili do ulíc — ukry fakľu (↓).',
@@ -216,8 +231,9 @@ const cs: Record<Key, string> = {
   newGame: 'Nová hra',
   newGameConfirm: 'Opravdu? Postup se smaže',
   controlsDesktop:
-    '← → / A D chůze · Mezerník / ↑ skok · V / E hůl · C / F jiskra · Shift / X rozzářit pochodeň · ↓ / S ukrýt pochodeň · Esc pauza',
-  controlsTouch: 'Šipky chůze · ⤒ skok · ⚚ hůl · ✸ jiskra · ✦ rozzářit · ◐ ukrýt pochodeň',
+    '← → / A D chůze · Mezerník / ↑ skok · V / E hůl · C / F jiskra · Shift / X rozzářit pochodeň · ↓ / S ukrýt pochodeň · Q bylina · Esc pauza',
+  controlsTouch:
+    'Šipky chůze · ⤒ skok · ⚚ hůl · ✸ jiskra · ✦ rozzářit · ◐ ukrýt pochodeň · ❦ bylina',
   world1: 'Karanténní čtvrť',
   level1: 'Karanténa',
   level2: 'Střechy',
@@ -278,10 +294,17 @@ const cs: Record<Key, string> = {
   hintShieldTouch:
     'Podrž ◐ a ukryj pochodeň pod plášť. Nakažení tě přestanou vidět a přízraky ztratí stopu — ale jdeš pomalu a tma se ti plíží.',
   hintMiasma:
-    'Zelená miazma tě nakazí. Projdi rychle nebo ji spal rozzářenou pochodní. Léčivé byliny nákazu vyléčí.',
+    'Zelená miazma tě nakazí. Projdi rychle nebo ji spal rozzářenou pochodní. Léčivé byliny neseš s sebou (nejvýš 3) a klávesou Q se vyléčíš.',
   diedMiasma: 'Udusila tě miazma…',
   diedRats: 'Sežraly tě krysy…',
   oilLow: 'Pochodeň dohořívá!',
+  hintSurvivor:
+    'Přeživší prosí o pomoc. Dej mu bylinu (Q) — nebo si ji nech. Když udeří zvon, opuštění se promění.',
+  hintSurvivorTouch:
+    'Přeživší prosí o pomoc. Dej mu bylinu ❦ — nebo si ji nech. Když udeří zvon, opuštění se promění.',
+  hintSurvivorNoHerb: 'Přeživší prosí o pomoc. Nemáš bylinu, kterou bys mu dal…',
+  savedToast: 'Zachránil jsi život.',
+  turnedToast: 'Nikdo mu nepomohl. Proměnil se…',
   gateLocked: 'Hranice nevzplane — ve čtvrti ještě doutná morových hnízd: {n} (♨).',
   nestsDone: 'Všechna morová hnízda shořela. Zapal hranici!',
   bellToll: 'Morový zvon! Nakažení se vyrojili do ulic — schovej pochodeň (↓).',

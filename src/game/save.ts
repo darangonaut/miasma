@@ -2,8 +2,8 @@
 export interface SaveData {
   /** Index najvyššieho odomknutého levelu. */
   unlocked: number;
-  /** Najviac nazbieraných svetlušiek a kryštálov podľa id levelu. */
-  best: Record<string, { fireflies: number; crystals: number }>;
+  /** Najviac nazbieraných uhlíkov, relikvií a zachránených preživších podľa id levelu. */
+  best: Record<string, { fireflies: number; crystals: number; survivors: number }>;
 }
 
 export const EMPTY_SAVE: SaveData = { unlocked: 0, best: {} };
@@ -17,7 +17,11 @@ export function parseSave(text: string | null): SaveData {
     if (raw.best && typeof raw.best === 'object') {
       for (const [id, v] of Object.entries(raw.best)) {
         if (v && typeof v.fireflies === 'number' && typeof v.crystals === 'number')
-          best[id] = { ...v };
+          best[id] = {
+            fireflies: v.fireflies,
+            crystals: v.crystals,
+            survivors: typeof v.survivors === 'number' ? v.survivors : 0,
+          };
       }
     }
     return { unlocked, best };
@@ -33,6 +37,7 @@ export function recordLevel(
   id: string,
   fireflies: number,
   crystals: number,
+  survivors = 0,
 ): SaveData {
   const prev = save.best[id];
   return {
@@ -42,6 +47,7 @@ export function recordLevel(
       [id]: {
         fireflies: Math.max(prev?.fireflies ?? 0, fireflies),
         crystals: Math.max(prev?.crystals ?? 0, crystals),
+        survivors: Math.max(prev?.survivors ?? 0, survivors),
       },
     },
   };
