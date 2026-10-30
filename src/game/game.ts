@@ -51,7 +51,7 @@ export const PLAYER_H = 13;
 // --- Fakľa a smola (v kóde „olej“) ---
 // Miasma je tvrdšia než Lumen: fakľa horí rýchlejšie, uhlíkov je menej a svetlo je menšie.
 export const OIL_MAX = 100;
-export const OIL_DRAIN = 1.5;
+export const OIL_DRAIN = 3;
 export const FLARE_DRAIN = 20;
 export const FIREFLY_OIL = 12;
 export const LIGHT_RADIUS = 44;

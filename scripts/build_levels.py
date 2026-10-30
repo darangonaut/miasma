@@ -324,6 +324,244 @@ q.put(126, 7, 'm'); q.plat(128, 130, 9, '-'); q.put(129, 8, '*'); q.put(106, 11,
 levels.append(('cathedral', 'cathedral-4', 'level16', [], q))
 
 
+# ===== Druhá polovica každého levelu: ťažšie úseky skladané z blokov =====
+# Každý level sa za pôvodnou (ručne navrhnutou) časťou predĺži zhruba na dvojnásobok.
+# Bloky sú navrhnuté v medziach skoku (najviac 4 políčka do diaľky, 3 do výšky);
+# obťažnosť stúpa so svetom a levelom. Náhoda je pevne zasiata podľa id levelu.
+
+WORLD_BLOCKS = {
+    'quarter': ['pit', 'spikes', 'step', 'planks', 'ghouls', 'bounce', 'ledges', 'wraiths'],
+    'catacombs': ['water', 'spikes', 'planks', 'ghouls', 'debris', 'slick', 'flies', 'ledges', 'wraiths'],
+    'pits': ['pit', 'water', 'spikes', 'planks', 'ghouls', 'bounce', 'step', 'wraiths', 'great'],
+    'cathedral': ['movers', 'lift', 'debris', 'ghouls', 'planks', 'ledges', 'spikes', 'great', 'pit'],
+}
+
+
+class Gen:
+    def __init__(s, lv, x, y, rng, world, diff):
+        s.lv, s.x, s.y, s.rng, s.world, s.diff = lv, x, y, rng, world, diff
+        s.since_ember = 0
+
+    def free(s, x, row):
+        return 0 <= row < H and 0 <= x < s.lv.w and s.lv.g[row][x] == ' '
+
+    def put(s, x, row, ch):
+        if s.free(x, row):
+            s.lv.g[row][x] = ch
+            return True
+        return False
+
+    def flat(s, n, ember=True, rock=True):
+        s.lv.ground(s.x, s.x + n - 1, top=s.y)
+        if ember:
+            # Uhlíky čím ďalej, tým redšie.
+            # Vo vetre a pri visiacich plošinách sa čaká, preto je tam uhlíkov viac.
+            gap = {'pits': 7, 'cathedral': 13}.get(s.world, 20) + s.diff // 2
+            for i in range(n):
+                s.since_ember += 1
+                if s.since_ember >= gap and s.put(s.x + i, s.y - 1, 'f'):
+                    s.since_ember = 0
+        if rock and s.world == 'pits' and n >= 5 and s.rng.random() < 0.35:
+            # Náhrobok: závetrie pred vetrom.
+            s.put(s.x + n // 2, s.y - 1, '#')
+        s.x += n
+
+    def gap_ember(s, x, row):
+        if s.put(x, row, 'f'):
+            s.since_ember = 0
+
+    def block(s, kind):
+        r = s.rng
+        d = s.diff
+        if kind == 'pit' or kind == 'water':
+            w = 3 if d < 6 else r.choice([3, 4])
+            if kind == 'water':
+                s.lv.water(s.x, s.x + w - 1, top=s.y)
+            s.x += w
+            s.flat(4)
+        elif kind == 'spikes':
+            s.flat(3)
+            w = 2 if d < 8 else r.choice([2, 3])
+            s.lv.ground(s.x, s.x + w - 1, top=s.y)
+            s.lv.plat(s.x, s.x + w - 1, s.y - 1, '^')
+            s.x += w
+            s.flat(4)
+        elif kind == 'step':
+            dy = r.choice([-2, 2, -3, 3]) if d >= 4 else r.choice([-2, 2])
+            ny = min(12, max(6, s.y + dy))
+            s.y = ny
+            s.flat(r.randint(4, 7))
+        elif kind == 'planks':
+            # Vo vetre len krátke mostíky (dosky sa prelomia skôr, než vietor utíchne).
+            n = 2 if s.world == 'pits' else 2 + d // 5 + r.randint(0, 1)
+            x0 = s.x
+            s.x += 2
+            for k in range(n):
+                s.lv.plat(s.x, s.x + 1, s.y, 'c')
+                if k % 2 == 0:
+                    s.gap_ember(s.x, s.y - 2)
+                s.x += 4
+            s.x -= 2
+            s.lv.water(x0, s.x - 1, top=min(H - 1, s.y + 2))
+            for x in range(x0, s.x):
+                if s.lv.g[s.y][x] == 'c':
+                    for row in range(s.y + 1, s.y + 2):
+                        s.lv.g[row][x] = ' '
+            s.flat(4)
+        elif kind == 'ghouls':
+            n = 10 + r.randint(0, 4)
+            low = d >= 5 and s.y - 5 >= 1 and r.random() < 0.6
+            x0 = s.x
+            s.flat(n)
+            if low:
+                # Nízky strop: nakazeného treba preskočiť tesne.
+                s.lv.ground(x0 + 2, x0 + n - 3, top=s.y - 6, bottom=s.y - 5)
+            count = 1 if d < 6 else 2
+            for k in range(count):
+                s.put(x0 + n - 3 - k * 4, s.y - 1, 'g')
+        elif kind == 'bounce':
+            if s.y - 5 < 3:
+                return s.block('spikes')
+            s.flat(1)
+            s.lv.ground(s.x, s.x + 3, top=s.y)
+            s.lv.plat(s.x + 1, s.x + 1, s.y, 'b')
+            s.x += 4
+            s.y -= 5
+            s.flat(r.randint(5, 8))
+            if r.random() < 0.5:
+                s.put(s.x - 3, s.y - 4, 's')
+            while s.y < 10:
+                s.y += 2
+                s.flat(r.randint(3, 5))
+        elif kind == 'ledges':
+            if s.y - 6 < 3:
+                return s.block('pit')
+            s.flat(2)
+            s.lv.plat(s.x + 1, s.x + 3, s.y - 3)
+            s.gap_ember(s.x + 2, s.y - 4)
+            s.lv.plat(s.x + 5, s.x + 7, s.y - 6)
+            s.x += 9
+            s.y -= 6
+            s.flat(r.randint(4, 6))
+            s.y += 3
+            s.flat(3)
+            s.y += 3
+            s.flat(3)
+        elif kind == 'debris':
+            if s.y - 7 < 0:
+                return s.block('spikes')
+            n = 8 + r.randint(0, 4) + d // 4
+            x0 = s.x
+            s.flat(n)
+            s.lv.ground(x0, x0 + n - 1, top=max(0, s.y - 8), bottom=s.y - 6)
+            for x in range(x0 + 1, x0 + n - 1, 2):
+                s.put(x, s.y - 5, 'v')
+        elif kind == 'slick':
+            n = 6 + r.randint(0, 4)
+            x0 = s.x
+            s.flat(n)
+            s.lv.plat(x0, x0 + n - 1, s.y, 'i')
+            s.flat(2)
+        elif kind == 'flies':
+            x0 = s.x
+            s.flat(8)
+            s.put(x0 + 3, s.y - 3, 'm')
+            if d >= 7:
+                s.put(x0 + 6, s.y - 4, 'm')
+        elif kind == 'wraiths':
+            x0 = s.x
+            s.flat(9)
+            s.put(x0 + 4, s.y - 5, 's')
+            if d >= 6:
+                s.put(x0 + 8, s.y - 3, 's')
+        elif kind == 'great':
+            x0 = s.x
+            s.flat(10)
+            s.put(x0 + 5, s.y - 5, 'S')
+        elif kind == 'movers':
+            if s.y > 12:
+                return s.block('pit')
+            s.put(s.x, s.y, 'H')
+            s.gap_ember(s.x + 3, s.y - 1)
+            if d >= 13 and r.random() < 0.6:
+                s.put(s.x + 7, s.y, 'H')
+                s.gap_ember(s.x + 10, s.y - 1)
+                s.x += 13
+            else:
+                s.x += 6
+            s.flat(4)
+        elif kind == 'lift':
+            if s.y - 4 < 4:
+                return s.block('movers')
+            s.put(s.x, s.y, 'V')
+            s.gap_ember(s.x - 1, s.y - 2)
+            s.x += 2
+            s.y -= 4
+            s.flat(r.randint(5, 7))
+            while s.y < 10:
+                s.y += 2
+                s.flat(3)
+
+
+def sprinkle(lv, x0, x1, every):
+    """Doplní uhlíky nad rovnú zem (kde je voľno) zhruba každých `every` stĺpcov."""
+    last = x0
+    for x in range(x0, x1):
+        if x - last < every:
+            continue
+        for row in range(1, H):
+            if lv.g[row][x] == '#' and lv.g[row - 1][x] == ' ' and (row < 2 or lv.g[row - 2][x] == ' '):
+                lv.g[row - 1][x] = 'f'
+                last = x
+                break
+
+
+def extend(lv, world, id_, diff, extra):
+    """Predĺži level o `extra` stĺpcov: pôvodná vatra zmizne, nová je na konci."""
+    ex = None
+    for row in range(H):
+        for x in range(lv.w):
+            if lv.g[row][x] == 'E':
+                ex = (x, row)
+                lv.g[row][x] = ' '
+    y = ex[1] + 1
+    width = lv.w + extra + 40
+    for r in lv.g:
+        r.extend([' '] * (width - lv.w))
+    old = lv.w
+    lv.w = width
+    if world == 'pits':
+        sprinkle(lv, 4, old - 4, 8)
+    rng = random.Random(sum(ord(c) * (i + 1) for i, c in enumerate(id_)))
+    g = Gen(lv, old, y, rng, world, diff)
+    g.flat(4)
+    pool = WORLD_BLOCKS[world]
+    # Na cintoríne sa čaká na vietor, preto dve kaplnky; inde jedna v polovici.
+    shrines = [old + extra // 3, old + 2 * extra // 3] if world == 'pits' else [old + extra // 2]
+    last = None
+    while g.x < old + extra:
+        kind = rng.choice([k for k in pool if k != last])
+        last = kind
+        g.block(kind)
+        g.flat(rng.randint(2, 4))
+        if shrines and g.x >= shrines[0]:
+            shrines.pop(0)
+            g.flat(2)
+            g.put(g.x - 1, g.y - 1, 'L')
+            g.flat(3)
+    g.flat(6, ember=False, rock=False)
+    assert g.put(g.x - 3, g.y - 1, 'E'), id_
+    lv.w = g.x
+    for r in lv.g:
+        del r[lv.w:]
+    if world == 'catacombs':
+        lv.ceiling(old, lv.w - 1)
+
+
+for i, (world, id_, name, hints, lv) in enumerate(levels):
+    extend(lv, world, id_, i, lv.w)
+
+
 out = [
     "import type { LevelDef } from './level';",
     '',

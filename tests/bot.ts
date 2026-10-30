@@ -12,13 +12,19 @@ import { TILE, Tile, isGround, tileAt } from '@/game/level';
 
 /**
  * Jednoduchý bot: beží doprava a skáče pred stenou, priepasťou a tŕňmi; na pohyblivé
- * plošiny počká a nechá sa odviezť. Overuje len geometriu (smolu dopĺňa, prízraky, muchy
- * a nakazených vypína). Vráti, či došiel k vatre, najďalší stĺpec a počet pádov.
+ * plošiny počká a nechá sa odviezť. Prízraky, muchy a nakazených vypína. Smolu dopĺňa len
+ * s `refuel`; bez neho overí, že uhlíky a kaplnky po ceste stačia (počíta smrti v tme). Vráti, či došiel k vatre, najďalší stĺpec a počet pádov.
  */
-export function botRun(game: Game, seconds = 600): { done: boolean; col: number; deaths: number } {
+export function botRun(
+  game: Game,
+  seconds = 600,
+  refuel = true,
+): { done: boolean; col: number; deaths: number; dark: number; minOil: number } {
   const dt = 1 / 60;
   let hold = 0;
   let best = 0;
+  let dark = 0;
+  let minOil = game.oil;
   const level = game.level;
   const windy = hasWind(level.world);
   const solidish = (c: number, r: number) => {
@@ -35,7 +41,7 @@ export function botRun(game: Game, seconds = 600): { done: boolean; col: number;
     solidish(c, r) && !solidish(c, r - 1) && tileAt(level, c, r - 1) !== Tile.Thorns;
 
   for (let t = 0; t < seconds && game.state !== 'done'; t += dt) {
-    game.oil = 100;
+    if (refuel) game.oil = 100;
     for (const s of game.shades) s.alive = false;
     for (const m of game.moths) m.alive = false;
     for (const g of game.ghouls) g.alive = false;
@@ -47,7 +53,9 @@ export function botRun(game: Game, seconds = 600): { done: boolean; col: number;
     const feetY = p.y + PLAYER_H;
 
     const step = (input: Partial<Input>) => {
-      game.step(dt, { ...NO_INPUT, ...input });
+      for (const e of game.step(dt, { ...NO_INPUT, ...input }))
+        if (e.type === 'died' && e.cause === 'dark') dark++;
+      minOil = Math.min(minOil, game.oil);
       best = Math.max(best, Math.floor(p.x / TILE));
     };
 
@@ -55,20 +63,6 @@ export function botRun(game: Game, seconds = 600): { done: boolean; col: number;
     if (p.x > level.exit.x + 8 && p.onGround) {
       step({ left: true });
       continue;
-    }
-
-    // Vietor: na pevnej zemi počká, kým vietor utíchne a do ďalšieho nárazu je dosť času.
-    if (windy && p.onGround && game.onMover < 0) {
-      const under = tileAt(level, Math.floor((p.x + PLAYER_W / 2) / TILE), feet);
-      if (
-        under !== Tile.Crumble &&
-        under !== Tile.Ice &&
-        (game.wind !== 0 || calmLeft(game.time) < 1.6)
-      ) {
-        hold = 0;
-        step({});
-        continue;
-      }
     }
 
     // Na pohyblivej plošine: čaká, kým je pred ním pevná zem na dosah, potom zíde/skočí.
@@ -129,6 +123,20 @@ export function botRun(game: Game, seconds = 600): { done: boolean; col: number;
     let up = false;
     for (let d = 4; d <= 24 && !up; d += 4)
       for (let r = row - 3; r <= row - 1; r++) if (landable(ahead(d), r)) up = true;
+    // Vietor: pred skokom z pevnej zeme počká, kým utíchne a do nárazu je dosť času.
+    const bounceAhead = [2, 8].some((d) => tileAt(level, ahead(d), feet) === Tile.Bounce);
+    if (windy && p.onGround && game.onMover < 0 && (wall || gap || thorns || up || bounceAhead)) {
+      const under = tileAt(level, Math.floor((p.x + PLAYER_W / 2) / TILE), feet);
+      if (
+        under !== Tile.Crumble &&
+        under !== Tile.Ice &&
+        (game.wind !== 0 || calmLeft(game.time) < 1.6)
+      ) {
+        hold = 0;
+        step({});
+        continue;
+      }
+    }
     if (p.onGround && (wall || gap || thorns || up)) hold = 0.65;
     const jump = hold > 0;
     hold -= dt;
@@ -146,5 +154,5 @@ export function botRun(game: Game, seconds = 600): { done: boolean; col: number;
       ((overMover && p.vy > 40) || [0, 1, 2, 3, 4].some((d) => landable(under, feet + d)));
     step({ right: !brake, left: brake && p.vx > 20, jump });
   }
-  return { done: game.state === 'done', col: best, deaths: game.deaths };
+  return { done: game.state === 'done', col: best, deaths: game.deaths, dark, minOil };
 }
