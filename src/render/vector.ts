@@ -111,7 +111,17 @@ function doctorPose(frame: PlayerFrame | 'breathe'): DoctorPose {
   };
 }
 
-// --- Prízraky, nakazení a muchy ---
+/** Palica morového lekára: tenká, s hlavicou; úchop je hore (y = 1.5). */
+function cane(): Texture {
+  return paint(3, 15, (ctx) => {
+    ctx.fillStyle = INK_CSS;
+    ctx.strokeStyle = INK_CSS;
+    line(ctx, 1.5, 1.2, 1.5, 14.5, 0.55);
+    circle(ctx, 1.5, 1, 0.85);
+  });
+}
+
+// --- Prízraky, nakazení a potkany ---
 /** Prízrak: kapucňa a potrhaný rubáš, ktorý sa stráca v cárach. */
 function shadeBody(ctx: Ctx, frame: number): void {
   ctx.beginPath();
@@ -1284,6 +1294,7 @@ export const vectorArt: Art = {
   sign,
   lightTile,
   rat,
+  cane,
   spark,
   water,
   crumble,

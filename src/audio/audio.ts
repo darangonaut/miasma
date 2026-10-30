@@ -222,9 +222,12 @@ export class Sound {
           this.sweep(500, 1400, 'triangle', 0.06, 0.15);
           this.noise(0.15, 3000, 0.05, 'highpass');
           break;
-        case 'stomp':
-          this.sweep(180, 60, 'square', 0.1, 0.12);
-          this.sweep(500, 900, 'square', 0.05, 0.1);
+        case 'swing':
+          this.noise(0.16, 900, 0.07, 'bandpass');
+          break;
+        case 'caneHit':
+          this.sweep(150, 55, 'square', 0.12, 0.12);
+          this.noise(0.1, 1400, 0.1);
           break;
         case 'ratDie':
           this.sweep(2400, 900, 'square', 0.04, 0.15);

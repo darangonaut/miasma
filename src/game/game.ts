@@ -18,6 +18,8 @@ export interface Input {
   flare: boolean;
   /** Hod iskry. */
   spark: boolean;
+  /** Úder palicou. */
+  cane: boolean;
 }
 
 export const NO_INPUT: Input = {
@@ -27,6 +29,7 @@ export const NO_INPUT: Input = {
   jump: false,
   flare: false,
   spark: false,
+  cane: false,
 };
 
 // --- Pohyb (px, s) ---
@@ -79,7 +82,18 @@ const SPARK_SPEED = 190;
 const SPARK_LIFE = 0.8;
 const SPARK_COOLDOWN = 0.35;
 export const SPARK_RADIUS = 34;
-const STOMP_BOUNCE = 210;
+// --- Palica morového lekára: úder na blízko, odpáli nakazených (aj do priepasti) ---
+/** Trvanie švihu a kedy v ňom palica zasahuje. */
+export const CANE_TIME = 0.3;
+const CANE_HIT_FROM = 0.06;
+const CANE_HIT_TO = 0.18;
+const CANE_COOLDOWN = 0.42;
+/** Dosah palice od stredu hráča. */
+export const CANE_REACH = 22;
+const CANE_KNOCK = 150;
+/** Zásah palicou ubere nakazenému polovicu síl. */
+const CANE_DAMAGE = 0.5;
+const KNOCK_TIME = 0.55;
 const CRUMBLE_DELAY = 0.6;
 /** Skákacia huba vymrští asi o 6 políčok. */
 export const BOUNCE_SPEED = 340;
@@ -187,7 +201,8 @@ export type GameEvent =
   | { type: 'shadeDie'; x: number; y: number }
   | { type: 'ratDie'; x: number; y: number }
   | { type: 'squeak'; x: number; y: number }
-  | { type: 'stomp'; x: number; y: number }
+  | { type: 'swing' }
+  | { type: 'caneHit'; x: number; y: number }
   | { type: 'throw' }
   | { type: 'fizzle'; x: number; y: number }
   | { type: 'crumble'; x: number; y: number }
@@ -264,6 +279,8 @@ export interface Ghoul {
   /** Kam ho priláka svetlo (x) a ako dlho tam ešte bude hľadať. */
   lure: number;
   lureTime: number;
+  /** Odpálený palicou: kĺže dozadu a chvíľu sa spamätáva. */
+  knock: number;
 }
 
 /** Potkan: x je stred, y sú labky. */
@@ -380,6 +397,11 @@ export class Game {
   onIce = false;
   private sparkCooldown = 0;
   private sparkHeld = false;
+  /** Čas od začiatku švihu palicou (−1 = nešvihá) a čo už zasiahol. */
+  swing = -1;
+  private swingCooldown = 0;
+  private caneHeld = false;
+  private swingHits = new Set<object>();
   exitLit = false;
   /** Tabuľa, pri ktorej hráč stojí (rada na obrazovke). */
   sign: Sign | null = null;
@@ -488,6 +510,7 @@ export class Game {
         step: 0,
         lure: p.x,
         lureTime: 0,
+        knock: 0,
       };
     });
     this.herbs = level.herbs.map((p) => ({ ...p, taken: false }));
@@ -594,6 +617,7 @@ export class Game {
     this.updateIcicles(dt);
     this.throwSpark(dt, input);
     this.updateSparks(dt);
+    this.swingCane(dt, input);
     if (this.state === 'play') this.updateShades(dt);
     if (this.state === 'play') this.updateRats(dt);
     if (this.state === 'play') this.updateGhouls(dt);
@@ -1056,10 +1080,11 @@ export class Game {
         this.hitShade(s);
         hit = true;
       }
+      // Nakazeného iskra nezabije, len ho odhodí a prepáli mu handry.
       for (const g of this.ghouls) {
         if (!g.alive || Math.abs(g.x - sp.x) > 6 || sp.y < g.y - GHOUL_H - 2 || sp.y > g.y + 2)
           continue;
-        this.killGhoul(g);
+        this.knockGhoul(g, Math.sign(sp.vx), 0.25, CANE_KNOCK * 0.6);
         hit = true;
       }
       if (blocked || hit || sp.life <= 0) {
@@ -1087,21 +1112,6 @@ export class Game {
     this.events.push({ type: 'shadeHit', x: s.x, y: s.y });
     this.recoil(s);
     s.timer = 1.4;
-  }
-
-  /** Skok na hlavu: padajúci hráč tieň rozplynie a odrazí sa. */
-  private tryStomp(s: Shade): boolean {
-    const p = this.player;
-    if (this.state !== 'play' || p.vy <= 0) return false;
-    const feet = p.y + PLAYER_H;
-    const size = s.big ? 1.8 : 1;
-    if (Math.abs(p.x + PLAYER_W / 2 - s.x) > 10 * size || feet < s.y - 9 * size || feet > s.y + 4)
-      return false;
-    this.hitShade(s);
-    p.vy = -(this.jumpHeld ? JUMP_SPEED : STOMP_BOUNCE);
-    p.onGround = false;
-    this.events.push({ type: 'stomp', x: s.x, y: s.y });
-    return true;
   }
 
   /** Potkany: kým svietiš, držia sa na okraji svetla; v tme alebo pri ukrytej fakli zaútočia. */
@@ -1184,7 +1194,7 @@ export class Game {
     const lights = this.lights();
     const playerLight = this.state === 'dead' ? 0 : this.radius;
     for (const s of this.shades) {
-      if (!s.alive || this.tryStomp(s)) continue;
+      if (!s.alive) continue;
       const dx = c.x - s.x;
       const dy = c.y - s.y;
       const dist = Math.hypot(dx, dy) || 1;
@@ -1289,7 +1299,6 @@ export class Game {
     this.noises = [];
     for (const g of this.ghouls) {
       if (!g.alive) continue;
-      if (alive && this.tryStompGhoul(g)) continue;
       const dx = pcx - g.x;
       const sameFloor = Math.abs(pFeet - g.y) < 26;
       // Svetlo ťa prezrádza: čím väčší plameň, tým zďaleka ťa vidia. Fakľu pod plášťom
@@ -1317,9 +1326,13 @@ export class Game {
           this.killGhoul(g);
           continue;
         }
-      } else g.hp = Math.min(1, g.hp + dt * 0.25);
+      } else g.hp = Math.min(1, g.hp + dt * 0.03);
 
       const toLure = g.lure - g.x;
+      if (g.knock > 0) {
+        this.slideGhoul(g, dt);
+        continue;
+      }
       const want = g.burning
         ? -Math.sign(dx || 1) * GHOUL_CHASE * 0.6
         : g.chasing
@@ -1372,17 +1385,88 @@ export class Game {
     return !(isGround(below) || below === Tile.Ledge || below === Tile.Crumble);
   }
 
-  private tryStompGhoul(g: Ghoul): boolean {
+  /** Úder palicou (alebo iskra): ubere sily a odhodí nakazeného. */
+  private knockGhoul(g: Ghoul, dir: number, damage: number, speed: number): void {
+    g.hp -= damage;
+    if (g.hp <= 0.1) {
+      this.killGhoul(g);
+      return;
+    }
+    g.knock = KNOCK_TIME;
+    g.vx = dir * speed;
+    g.dir = dir > 0 ? -1 : 1;
+  }
+
+  /** Odpálený nakazený kĺže dozadu; nad priepasťou, hrotmi či žumpou spadne a zahynie. */
+  private slideGhoul(g: Ghoul, dt: number): void {
+    g.knock -= dt;
+    g.vx = approach(g.vx, 0, 320 * dt);
+    const nx = g.x + g.vx * dt;
+    const level = this.level;
+    const front = Math.floor((nx + Math.sign(g.vx) * (GHOUL_W / 2)) / TILE);
+    const rows = [Math.floor((g.y - 1) / TILE), Math.floor((g.y - GHOUL_H + 1) / TILE)];
+    const wall = rows.some((r) => {
+      const t = tileAt(level, front, r);
+      if (t === Tile.Barricade)
+        return this.barricadeAt.get(r * level.width + front)?.state !== 'gone';
+      return isGround(t) || t === Tile.Crumble;
+    });
+    if (wall) g.vx = 0;
+    else g.x = nx;
+    const col = Math.floor(g.x / TILE);
+    const row = Math.floor((g.y + 1) / TILE);
+    const below = tileAt(level, col, row);
+    const inside = tileAt(level, col, row - 1);
+    if (inside === Tile.Thorns || inside === Tile.Water || below === Tile.Water) this.killGhoul(g);
+    else if (!(isGround(below) || below === Tile.Ledge || below === Tile.Crumble))
+      this.killGhoul(g);
+  }
+
+  /** Palica: švih pred seba zasiahne nakazených, potkany aj prízraky. */
+  private swingCane(dt: number, input: Input): void {
+    this.swingCooldown = Math.max(0, this.swingCooldown - dt);
+    const pressed = input.cane && !this.caneHeld;
+    this.caneHeld = input.cane;
+    if (this.swing >= 0) {
+      this.swing += dt;
+      if (this.swing >= CANE_TIME) this.swing = -1;
+    }
+    if (pressed && this.swing < 0 && this.swingCooldown <= 0 && this.state === 'play') {
+      this.swing = 0;
+      this.swingCooldown = CANE_COOLDOWN;
+      this.swingHits.clear();
+      this.events.push({ type: 'swing' });
+    }
+    if (this.swing < CANE_HIT_FROM || this.swing > CANE_HIT_TO || this.state !== 'play') return;
     const p = this.player;
-    if (p.vy <= 0) return false;
-    const feet = p.y + PLAYER_H;
-    const top = g.y - GHOUL_H;
-    if (Math.abs(p.x + PLAYER_W / 2 - g.x) > 8 || feet < top - 2 || feet > top + 6) return false;
-    this.killGhoul(g);
-    p.vy = -(this.jumpHeld ? JUMP_SPEED : STOMP_BOUNCE);
-    p.onGround = false;
-    this.events.push({ type: 'stomp', x: g.x, y: top });
-    return true;
+    const dir = p.facing;
+    const cx = p.x + PLAYER_W / 2;
+    const top = p.y - 4;
+    const bottom = p.y + PLAYER_H + 2;
+    const inReach = (x: number, y0: number, y1: number, w: number) => {
+      const rel = (x - cx) * dir;
+      return rel > -w / 2 && rel < CANE_REACH + w / 2 && y1 > top && y0 < bottom;
+    };
+    for (const g of this.ghouls) {
+      if (!g.alive || this.swingHits.has(g) || !inReach(g.x, g.y - GHOUL_H, g.y, GHOUL_W)) continue;
+      this.swingHits.add(g);
+      this.events.push({ type: 'caneHit', x: g.x, y: g.y - GHOUL_H / 2 });
+      this.knockGhoul(g, dir, CANE_DAMAGE, CANE_KNOCK);
+    }
+    for (const r of this.rats) {
+      if (!r.alive || !inReach(r.x, r.y - RAT_H, r.y, RAT_W)) continue;
+      this.events.push({ type: 'caneHit', x: r.x, y: r.y - 2 });
+      this.killRat(r);
+    }
+    for (const s of this.shades) {
+      const size = s.big ? 8 : 5;
+      if (!s.alive || this.swingHits.has(s) || !inReach(s.x, s.y - size, s.y + size, size * 2))
+        continue;
+      this.swingHits.add(s);
+      this.events.push({ type: 'caneHit', x: s.x, y: s.y });
+      this.hitShade(s);
+      s.vx += dir * 120;
+    }
   }
 
   private killGhoul(g: Ghoul): void {
@@ -1445,6 +1529,7 @@ export class Game {
     this.infection = 0;
     this.fog.set(this.fogHome);
     this.sparks.length = 0;
+    this.swing = -1;
     this.onMover = -1;
     for (const ic of this.icicles) {
       ic.x = ic.home.x;
@@ -1465,6 +1550,7 @@ export class Game {
       g.dir = -1;
       g.chasing = false;
       g.lureTime = 0;
+      g.knock = 0;
       g.hp = 1;
     }
     for (const s of this.shades) {

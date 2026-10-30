@@ -216,17 +216,16 @@ describe('uloženie', () => {
 });
 
 describe('boj a jaskyne', () => {
-  it('skok na hlavu rozplynie tieň a hráč sa odrazí', () => {
-    // Tieň priamo pod padajúcim hráčom.
-    const g2 = make(['    ', '    ', ' P s        E', '#############']);
-    const shade = g2.shades[0]!;
-    g2.player.x = shade.x - 4;
-    g2.player.y = shade.y - 30;
-    g2.player.vy = 200;
+  it('palica rozplynie tieň pred hráčom', () => {
+    const game = make([' P s        E', '#############']);
+    const shade = game.shades[0]!;
     shade.active = true;
+    game.player.x = shade.x - 16;
+    game.player.y = shade.y - 6;
     shade.home = { x: shade.x, y: shade.y };
-    const events = run(g2, 0.3);
-    expect(events.some((e) => e.type === 'stomp')).toBe(true);
+    const events = [...game.step(DT, { ...NO_INPUT, cane: true }), ...run(game, 0.3)];
+    expect(events.some((e) => e.type === 'swing')).toBe(true);
+    expect(events.some((e) => e.type === 'caneHit')).toBe(true);
     expect(shade.alive).toBe(false);
   });
 
@@ -481,22 +480,51 @@ describe('nové svety', () => {
     expect(events.some((e) => e.type === 'died' && e.cause === 'ghoul')).toBe(true);
   });
 
-  it('nakazeného zabije skok na hlavu, iskra aj rozžiarená fakľa', () => {
-    const stomp = make(['                ', ' P     g       E', '################']);
-    const g = stomp.ghouls[0]!;
-    stomp.player.x = g.x - 4;
-    stomp.player.y = g.y - 14 - 30;
-    stomp.player.vy = 200;
-    expect(run(stomp, 0.3).some((e) => e.type === 'stomp')).toBe(true);
+  it('palica: dva údery zabijú nakazeného, jeden ho zhodí do priepasti', () => {
+    const swing = (game: Game) => [
+      ...game.step(DT, { ...NO_INPUT, cane: true }),
+      ...run(game, 0.5),
+    ];
+    const flat = make([' P     g               E', '########################']);
+    const g = flat.ghouls[0]!;
+    flat.player.x = g.x - 18;
+    swing(flat);
+    expect(g.alive).toBe(true);
+    expect(g.x).toBeGreaterThan(7 * TILE + 8 + 10);
+    flat.player.x = g.x - 18;
+    swing(flat);
     expect(g.alive).toBe(false);
 
+    const pit = make([' P     g  E', '########  #', '########  #']);
+    const p = pit.ghouls[0]!;
+    pit.player.x = p.x - 18;
+    const ev = swing(pit);
+    expect(p.alive).toBe(false);
+    expect(ev.some((e) => e.type === 'ghoulDie')).toBe(true);
+
+    // Skok na hlavu už nepomôže a iskra nakazeného len odhodí.
     const spark = make([' P      g       E', '#################']);
-    const events = [...spark.step(DT, { ...NO_INPUT, spark: true }), ...run(spark, 1)];
-    expect(events.some((e) => e.type === 'ghoulDie')).toBe(true);
+    const sg = spark.ghouls[0]!;
+    spark.step(DT, { ...NO_INPUT, spark: true });
+    run(spark, 0.6);
+    expect(sg.alive).toBe(true);
+    expect(sg.hp).toBeLessThan(1);
 
     const flare = make([' P   g          E', '#################']);
     expect(run(flare, 1.5, { flare: true }).some((e) => e.type === 'ghoulDie')).toBe(true);
     expect(flare.state).toBe('play');
+  });
+
+  it('palica zabije potkany', () => {
+    const game = make([' P        r          E', '######################']);
+    run(game, 2);
+    const near = game.rats.filter((r) => Math.abs(r.x - game.center.x) < 40).length;
+    expect(near).toBeGreaterThan(0);
+    for (let i = 0; i < 4; i++) {
+      game.step(DT, { ...NO_INPUT, cane: true });
+      run(game, 0.5, { right: true });
+    }
+    expect(game.rats.some((r) => !r.alive)).toBe(true);
   });
 
   it('miazma nakazí a zabije, byliny vyliečia, rozžiarená fakľa ju spáli', () => {

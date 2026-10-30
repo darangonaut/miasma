@@ -7,8 +7,8 @@ const en = {
   newGame: 'New game',
   newGameConfirm: 'Sure? Progress will be lost',
   controlsDesktop:
-    '← → / A D move · Space / ↑ jump · C / F spark · Shift / X flare the torch · ↓ / S hide the torch · Esc pause',
-  controlsTouch: 'Arrows move · ⤒ jump · ✸ spark · ✦ flare · ◐ hide the torch',
+    '← → / A D move · Space / ↑ jump · V / E cane · C / F spark · Shift / X flare the torch · ↓ / S hide the torch · Esc pause',
+  controlsTouch: 'Arrows move · ⤒ jump · ⚚ cane · ✸ spark · ✦ flare · ◐ hide the torch',
   world1: 'Quarantine Quarter',
   level1: 'Quarantine',
   level2: 'Rooftops',
@@ -37,9 +37,9 @@ const en = {
   hintShrine: 'Light the candle in a shrine. It saves your progress and refills the torch.',
   hintSpikes: 'Iron spikes. One mistake is enough.',
   hintGhoul:
-    'Your fire gives you away: the bigger the flame, the farther the infected see you. One touch kills. Jump on their heads, throw a spark (C) or flare the torch (Shift).',
+    'Your fire gives you away: the bigger the flame, the farther the infected see you. One touch kills. Strike them with your cane (V) — two blows, or one into a pit.',
   hintGhoulTouch:
-    'Your fire gives you away: the bigger the flame, the farther the infected see you. One touch kills. Jump on their heads, throw a spark ✸ or flare the torch ✦.',
+    'Your fire gives you away: the bigger the flame, the farther the infected see you. One touch kills. Strike them with your cane ⚚ — two blows, or one into a pit.',
   hintExit: 'At the end of every path, light the pyre. Fire purifies.',
   hintAwning: 'Stretched canvas throws you high. Hold jump to float further.',
   hintPlanks: 'Rotten planks give way beneath you. Don’t stop.',
@@ -108,8 +108,8 @@ const sk: Record<Key, string> = {
   newGame: 'Nová hra',
   newGameConfirm: 'Naozaj? Postup sa zmaže',
   controlsDesktop:
-    '← → / A D chôdza · Medzerník / ↑ skok · C / F iskra · Shift / X rozžiariť fakľu · ↓ / S ukryť fakľu · Esc pauza',
-  controlsTouch: 'Šípky chôdza · ⤒ skok · ✸ iskra · ✦ rozžiariť · ◐ ukryť fakľu',
+    '← → / A D chôdza · Medzerník / ↑ skok · V / E palica · C / F iskra · Shift / X rozžiariť fakľu · ↓ / S ukryť fakľu · Esc pauza',
+  controlsTouch: 'Šípky chôdza · ⤒ skok · ⚚ palica · ✸ iskra · ✦ rozžiariť · ◐ ukryť fakľu',
   world1: 'Karanténna štvrť',
   level1: 'Karanténa',
   level2: 'Strechy',
@@ -138,9 +138,9 @@ const sk: Record<Key, string> = {
   hintShrine: 'Zapáľ sviecu v kaplnke. Uloží postup a doplní fakľu.',
   hintSpikes: 'Železné hroty. Stačí jedna chyba.',
   hintGhoul:
-    'Oheň ťa prezrádza: čím väčší plameň, tým zďaleka ťa nakazení vidia. Dotyk zabije. Skoč im na hlavu, hoď iskru (C) alebo rozžiar fakľu (Shift).',
+    'Oheň ťa prezrádza: čím väčší plameň, tým zďaleka ťa nakazení vidia. Dotyk zabije. Udri ich palicou (V) — dva údery, alebo jeden do priepasti.',
   hintGhoulTouch:
-    'Oheň ťa prezrádza: čím väčší plameň, tým zďaleka ťa nakazení vidia. Dotyk zabije. Skoč im na hlavu, hoď iskru ✸ alebo rozžiar fakľu ✦.',
+    'Oheň ťa prezrádza: čím väčší plameň, tým zďaleka ťa nakazení vidia. Dotyk zabije. Udri ich palicou ⚚ — dva údery, alebo jeden do priepasti.',
   hintExit: 'Na konci každej cesty zapáľ hranicu. Oheň očisťuje.',
   hintAwning: 'Napnutá plachta ťa vymrští vysoko. Podrž skok a doletíš ďalej.',
   hintPlanks: 'Zhnité dosky sa pod tebou prelomia. Nezastavuj.',
@@ -206,8 +206,8 @@ const cs: Record<Key, string> = {
   newGame: 'Nová hra',
   newGameConfirm: 'Opravdu? Postup se smaže',
   controlsDesktop:
-    '← → / A D chůze · Mezerník / ↑ skok · C / F jiskra · Shift / X rozzářit pochodeň · ↓ / S ukrýt pochodeň · Esc pauza',
-  controlsTouch: 'Šipky chůze · ⤒ skok · ✸ jiskra · ✦ rozzářit · ◐ ukrýt pochodeň',
+    '← → / A D chůze · Mezerník / ↑ skok · V / E hůl · C / F jiskra · Shift / X rozzářit pochodeň · ↓ / S ukrýt pochodeň · Esc pauza',
+  controlsTouch: 'Šipky chůze · ⤒ skok · ⚚ hůl · ✸ jiskra · ✦ rozzářit · ◐ ukrýt pochodeň',
   world1: 'Karanténní čtvrť',
   level1: 'Karanténa',
   level2: 'Střechy',
@@ -236,9 +236,9 @@ const cs: Record<Key, string> = {
   hintShrine: 'Zapal svíci v kapličce. Uloží postup a doplní pochodeň.',
   hintSpikes: 'Železné hroty. Stačí jedna chyba.',
   hintGhoul:
-    'Oheň tě prozrazuje: čím větší plamen, tím zdálky tě nakažení vidí. Dotek zabíjí. Skoč jim na hlavu, hoď jiskru (C) nebo rozzař pochodeň (Shift).',
+    'Oheň tě prozrazuje: čím větší plamen, tím zdálky tě nakažení vidí. Dotek zabíjí. Uhoď je holí (V) — dvě rány, nebo jedna do propasti.',
   hintGhoulTouch:
-    'Oheň tě prozrazuje: čím větší plamen, tím zdálky tě nakažení vidí. Dotek zabíjí. Skoč jim na hlavu, hoď jiskru ✸ nebo rozzař pochodeň ✦.',
+    'Oheň tě prozrazuje: čím větší plamen, tím zdálky tě nakažení vidí. Dotek zabíjí. Uhoď je holí ⚚ — dvě rány, nebo jedna do propasti.',
   hintExit: 'Na konci každé cesty zapal hranici. Oheň očišťuje.',
   hintAwning: 'Napnutá plachta tě vymrští vysoko. Podrž skok a doletíš dál.',
   hintPlanks: 'Shnilá prkna se pod tebou prolomí. Nezastavuj.',

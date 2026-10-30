@@ -18,6 +18,9 @@ const KEYS: Record<string, keyof Input> = {
   KeyC: 'spark',
   KeyF: 'spark',
   KeyJ: 'spark',
+  KeyV: 'cane',
+  KeyE: 'cane',
+  KeyL: 'cane',
 };
 
 /** Klávesnica a dotykové tlačidlá → stav ovládania. */
@@ -91,6 +94,7 @@ export class Controls {
       jump: active.has('jump'),
       flare: active.has('flare'),
       spark: active.has('spark'),
+      cane: active.has('cane'),
     };
   }
 

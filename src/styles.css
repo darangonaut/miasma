@@ -343,6 +343,11 @@ button.big:hover {
   color: var(--ember);
 }
 
+#touch .cane {
+  margin-bottom: 44px;
+  color: var(--text);
+}
+
 /* --- Obrazovky --- */
 .screen {
   position: fixed;

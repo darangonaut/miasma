@@ -9,6 +9,7 @@ import {
 } from 'pixi.js';
 import {
   BARRICADE_LIGHT,
+  CANE_TIME,
   FLARE_RADIUS,
   GHOUL_H,
   LANTERN_RADIUS,
@@ -126,6 +127,8 @@ export class Renderer {
   private ghoulSprites: { body: Sprite; eyes: Sprite }[] = [];
   /** Plameň fakle (kreslí sa nad tmou). */
   private torch = new Sprite();
+  /** Palica v druhej ruke (pri údere sa zahne nad hlavou dopredu). */
+  private cane = new Sprite();
   private fireflySprites: Sprite[] = [];
   private crystalSprites: Sprite[] = [];
   private lanternSprites: Sprite[] = [];
@@ -406,7 +409,9 @@ export class Renderer {
     });
     this.player = new Sprite(this.tex.player.get('idle'));
     this.player.anchor.set(0.5, 1);
-    this.actors.addChild(this.player);
+    this.cane = new Sprite(art.cane());
+    this.cane.anchor.set(0.5, 1.5 / 15);
+    this.actors.addChild(this.cane, this.player);
     this.torch = new Sprite(this.tex.flame[0]);
     this.torch.anchor.set(0.5, 0.97);
     this.above.addChild(this.torch);
@@ -484,10 +489,10 @@ export class Renderer {
           this.burst(e.x, e.y, 16, C.shadeInner, 60, false);
           this.burst(e.x, e.y, 10, 0xffb070, 50, true);
           break;
-        case 'stomp':
-          this.shake = 2;
-          for (const dir of [-1, 1])
-            this.spawn(this.tex.dust, e.x + dir * 4, e.y + 4, dir * 40, 0, 0, 0.3, false);
+        case 'caneHit':
+          this.shake = 2.5;
+          this.burst(e.x, e.y, 8, C.shadeInner, 50, false);
+          this.burst(e.x, e.y, 4, 0xfff0d0, 40, true);
           break;
         case 'ratDie':
           this.burst(e.x, e.y, 8, C.shadeInner, 40, false);
@@ -705,6 +710,17 @@ export class Renderer {
     this.player.scale.y = game.shielded ? 0.92 : 1;
     this.torch.scale.set(size * (1 + Math.sin(t * 23) * 0.06), size * (1 + Math.sin(t * 17) * 0.1));
     this.torch.position.set(lamp.x, lamp.y + 1.6);
+    // Palica: v pokoji opretá špičkou dopredu, pri údere švih zhora pred seba.
+    const sw = game.swing;
+    let a = 0.32 + Math.sin(this.runPhase * Math.PI * 0.5) * 0.06;
+    if (sw >= 0) {
+      if (sw < 0.06) a = 0.32 + (3.4 - 0.32) * (sw / 0.06);
+      else if (sw < 0.16) a = 3.4 - (3.4 - 0.85) * ((sw - 0.06) / 0.1);
+      else a = 0.85 - (0.85 - 0.32) * ((sw - 0.16) / (CANE_TIME - 0.16));
+    }
+    this.cane.visible = this.player.visible;
+    this.cane.rotation = -p.facing * a;
+    this.cane.position.set(p.x + PLAYER_W / 2 + p.facing * 0.5, p.y + 7 + (game.shielded ? 1 : 0));
 
     // Svetelné plošiny sa plynule zjavia a zmiznú.
     for (const lt of this.lightTiles) {
