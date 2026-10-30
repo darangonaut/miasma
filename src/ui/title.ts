@@ -1,8 +1,10 @@
 /**
  * Úvodná scéna: morový lekár zblízka, z profilu proti krvavému mesiacu. Fakľa ho osvetľuje
  * zdola, v skle masky sa odráža plameň. V tme žmurkajú oči prízrakov a keď udrie blesk,
- * na ulici za ním na okamih vidno dav nakazených.
+ * na ulici za ním na okamih vidno dav nakazených. Celá scéna sa kreslí do skrytého plátna
+ * a na obrazovku ide cez drevorezový shader (ako hra), takže vyzerá ako stará tlač.
  */
+import { WoodcutCanvas } from '@/render/woodcut';
 
 const INK = '#030304';
 
@@ -13,6 +15,9 @@ function rand(i: number, seed: number): number {
 
 export class TitleScene {
   private ctx: CanvasRenderingContext2D;
+  /** Skryté plátno so scénou; bez WebGL2 sa kreslí rovno na obrazovku. */
+  private scene: HTMLCanvasElement;
+  private woodcut: WoodcutCanvas | null;
   /** Statické pozadie (nebo, mesiac, mesto). */
   private backdrop = document.createElement('canvas');
   /** Silueta lekára (čierna), každý snímok sa na jej kópiu dokreslí svetlo fakle. */
@@ -30,7 +35,9 @@ export class TitleScene {
   }));
 
   constructor(private readonly canvas: HTMLCanvasElement) {
-    this.ctx = canvas.getContext('2d')!;
+    this.woodcut = WoodcutCanvas.create(canvas);
+    this.scene = this.woodcut ? document.createElement('canvas') : canvas;
+    this.ctx = this.scene.getContext('2d')!;
     window.addEventListener('resize', () => {
       if (this.running) this.layout();
     });
@@ -70,7 +77,7 @@ export class TitleScene {
     this.dpr = Math.min(window.devicePixelRatio || 1, 2);
     this.w = this.canvas.clientWidth || window.innerWidth;
     this.h = this.canvas.clientHeight || window.innerHeight;
-    for (const c of [this.canvas, this.backdrop, this.figure, this.lit]) {
+    for (const c of [this.canvas, this.scene, this.backdrop, this.figure, this.lit]) {
       c.width = Math.round(this.w * this.dpr);
       c.height = Math.round(this.h * this.dpr);
     }
@@ -101,8 +108,8 @@ export class TitleScene {
     ctx.fillStyle = halo;
     ctx.fillRect(mx - mr * 4, my - mr * 4, mr * 8, mr * 8);
     const moon = ctx.createRadialGradient(mx - mr * 0.3, my - mr * 0.3, mr * 0.1, mx, my, mr);
-    moon.addColorStop(0, '#d88a70');
-    moon.addColorStop(1, '#8a3424');
+    moon.addColorStop(0, '#f0603c');
+    moon.addColorStop(1, '#a8241a');
     ctx.fillStyle = moon;
     ctx.beginPath();
     ctx.arc(mx, my, mr, 0, Math.PI * 2);
@@ -384,6 +391,7 @@ export class TitleScene {
     vig.addColorStop(1, `rgba(40,0,0,${(0.35 + beat * 0.12).toFixed(3)})`);
     ctx.fillStyle = vig;
     ctx.fillRect(0, 0, w, h);
+    this.woodcut?.render(this.scene, Math.max(4, s * 0.9 * this.dpr), 0.025, 0.2);
   }
 
   /** Šev na zobáku, okraj klobúka a sklo masky, v ktorom sa odráža plameň. */

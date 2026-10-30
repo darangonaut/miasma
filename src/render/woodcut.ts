@@ -7,7 +7,8 @@ import { Filter, GlProgram, defaultFilterVert } from 'pixi.js';
  * ručne kolorovaných tlačiach tanca smrti. Ryhy sú ukotvené k svetu, nie k obrazovke,
  * takže sa pri pohybe kamery „neplazia“.
  */
-const fragment = /* glsl */ `
+/** Fragment shader drevorezu (GLSL ES 3.0); zdieľa ho hra aj úvodná obrazovka. */
+export const WOODCUT_FRAGMENT = /* glsl */ `
 in vec2 vTextureCoord;
 out vec4 finalColor;
 
@@ -16,6 +17,9 @@ uniform vec4 uInputSize;
 uniform vec2 uCam;
 uniform float uSpacing;
 uniform float uStrength;
+/** Rozsah jasu, z ktorého sa robí čerň (uLow) až papier (uHigh). */
+uniform float uLow;
+uniform float uHigh;
 
 float hash(vec2 p) {
   return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -46,7 +50,7 @@ void main(void) {
   float L = dot(c.rgb, vec3(0.299, 0.587, 0.114));
   // Hra je tmavá: stredné tóny sa zdvihnú, aby sa svetlo fakle vytlačilo ako papier.
   // Siluety a tma (L < 0,05) sú plná čerň, osvetlené pozadie (L okolo 0,2–0,4) papier.
-  float t = smoothstep(0.036, 0.13, L);
+  float t = smoothstep(uLow, uHigh, L);
   t += (vnoise(p / (sp * 0.8)) - 0.5) * 0.08;
 
   // Ručne rezané čiary sa jemne vlnia.
@@ -87,7 +91,7 @@ export class Woodcut {
     this.filter = new Filter({
       glProgram: GlProgram.from({
         vertex: defaultFilterVert,
-        fragment,
+        fragment: WOODCUT_FRAGMENT,
         name: 'woodcut',
         preferredFragmentPrecision: 'highp',
       }),
@@ -96,6 +100,8 @@ export class Woodcut {
           uCam: { value: new Float32Array(2), type: 'vec2<f32>' },
           uSpacing: { value: 5, type: 'f32' },
           uStrength: { value: 1, type: 'f32' },
+          uLow: { value: 0.036, type: 'f32' },
+          uHigh: { value: 0.13, type: 'f32' },
         },
       },
       resolution: 'inherit',
@@ -110,5 +116,88 @@ export class Woodcut {
     cam[0] = -worldX * resolution;
     cam[1] = -worldY * resolution;
     u.uSpacing = Math.max(3, zoom * resolution * 1.25);
+  }
+}
+
+/**
+ * Ten istý drevorez pre obyčajné plátno (úvodná obrazovka): obrázok z 2D plátna sa
+ * nahrá ako textúra a vykreslí cez shader do WebGL2 plátna. Bez WebGL2 vráti null.
+ */
+export class WoodcutCanvas {
+  private gl: WebGL2RenderingContext;
+  private program: WebGLProgram;
+  private texture: WebGLTexture;
+  private loc: Record<string, WebGLUniformLocation | null> = {};
+
+  static create(canvas: HTMLCanvasElement): WoodcutCanvas | null {
+    const gl = canvas.getContext('webgl2', { antialias: false, premultipliedAlpha: false });
+    if (!gl) return null;
+    try {
+      return new WoodcutCanvas(gl);
+    } catch {
+      return null;
+    }
+  }
+
+  private constructor(gl: WebGL2RenderingContext) {
+    this.gl = gl;
+    const vertex = `#version 300 es
+in vec2 aPos;
+out vec2 vTextureCoord;
+void main() {
+  vTextureCoord = aPos * 0.5 + 0.5;
+  gl_Position = vec4(aPos, 0.0, 1.0);
+}`;
+    const compile = (type: number, src: string) => {
+      const sh = gl.createShader(type)!;
+      gl.shaderSource(sh, src);
+      gl.compileShader(sh);
+      if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(sh)!);
+      return sh;
+    };
+    const program = gl.createProgram();
+    gl.attachShader(program, compile(gl.VERTEX_SHADER, vertex));
+    gl.attachShader(
+      program,
+      compile(gl.FRAGMENT_SHADER, `#version 300 es\nprecision highp float;\n${WOODCUT_FRAGMENT}`),
+    );
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error('woodcut link');
+    this.program = program;
+    const buffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+    const pos = gl.getAttribLocation(program, 'aPos');
+    gl.enableVertexAttribArray(pos);
+    gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
+    this.texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this.texture);
+    for (const [k, v] of [
+      [gl.TEXTURE_MIN_FILTER, gl.LINEAR],
+      [gl.TEXTURE_MAG_FILTER, gl.LINEAR],
+      [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE],
+      [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE],
+    ])
+      gl.texParameteri(gl.TEXTURE_2D, k!, v!);
+    for (const name of ['uTexture', 'uInputSize', 'uCam', 'uSpacing', 'uStrength', 'uLow', 'uHigh'])
+      this.loc[name] = gl.getUniformLocation(program, name);
+  }
+
+  render(source: HTMLCanvasElement, spacing: number, low: number, high: number): void {
+    const gl = this.gl;
+    const { width, height } = source;
+    gl.viewport(0, 0, width, height);
+    gl.useProgram(this.program);
+    gl.bindTexture(gl.TEXTURE_2D, this.texture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+    gl.uniform1i(this.loc.uTexture!, 0);
+    gl.uniform4f(this.loc.uInputSize!, width, height, 1 / width, 1 / height);
+    gl.uniform2f(this.loc.uCam!, 0, 0);
+    gl.uniform1f(this.loc.uSpacing!, spacing);
+    gl.uniform1f(this.loc.uStrength!, 1);
+    gl.uniform1f(this.loc.uLow!, low);
+    gl.uniform1f(this.loc.uHigh!, high);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
 }

@@ -1,6 +1,9 @@
-import '@fontsource/cinzel/600.css';
-import '@fontsource/nunito/400.css';
-import '@fontsource/nunito/700.css';
+import '@fontsource/unifrakturmaguntia/400.css';
+import '@fontsource/grenze-gotisch/500.css';
+import '@fontsource/grenze-gotisch/700.css';
+import '@fontsource/eb-garamond/400.css';
+import '@fontsource/eb-garamond/400-italic.css';
+import '@fontsource/eb-garamond/600.css';
 import './styles.css';
 import { Sound } from './audio/audio';
 import { DREAD_LIMIT, Game, OIL_MAX, type GameEvent } from './game/game';
