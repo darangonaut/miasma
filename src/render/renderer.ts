@@ -24,6 +24,7 @@ import { TILE, Tile, isGround, tileAt, type World } from '@/game/level';
 import type { WorldInfo } from './art';
 import { C, PLAYER_FRAMES, decorOf, lightCanvas, type PlayerFrame } from './common';
 import { vectorArt as art } from './vector';
+import { Woodcut } from './woodcut';
 
 interface Particle {
   sprite: Sprite;
@@ -77,6 +78,8 @@ export class Renderer {
   private time = 0;
   private runPhase = 0;
   private game!: Game;
+  /** Drevorez nad celou scénou (?classic ho vypne). */
+  private woodcut: Woodcut | null = null;
 
   private tex = {
     player: new Map<string, Texture>(),
@@ -146,6 +149,7 @@ export class Renderer {
       roundPixels: true,
       autoDensity: true,
       resolution: Math.min(window.devicePixelRatio || 1, 2),
+      preference: 'webgl',
     });
     host.appendChild(this.app.canvas);
 
@@ -174,6 +178,11 @@ export class Renderer {
     this.particlesAbove.blendMode = 'add';
 
     this.app.stage.addChild(this.bg, this.world);
+    if (!new URLSearchParams(location.search).has('classic')) {
+      this.woodcut = new Woodcut();
+      this.app.stage.filters = [this.woodcut.filter];
+      this.app.stage.filterArea = this.app.screen;
+    }
     this.resize();
     this.app.renderer.on('resize', () => this.resize());
   }
@@ -236,6 +245,8 @@ export class Renderer {
     this.above = new Container();
     this.glow = new Container();
     this.glow.blendMode = 'add';
+    // V drevoreze by teplá žiara rozmazala siluety (čierna musí ostať čiernou).
+    if (this.woodcut) this.glow.alpha = 0.3;
     this.particlesAbove = new Container();
     this.particlesAbove.blendMode = 'add';
     this.glowPool = [];
@@ -356,7 +367,9 @@ export class Renderer {
       const sprite = new Sprite(this.tex.fog);
       sprite.anchor.set(0.5);
       sprite.position.set(f.col * TILE + TILE / 2, f.row * TILE + TILE / 2);
-      sprite.blendMode = 'add';
+      // V drevoreze sa miazma tlačí medenkou (sčítané svetlo by vybielilo do papiera).
+      sprite.blendMode = this.woodcut ? 'normal' : 'add';
+      if (this.woodcut) sprite.tint = 0x3f8a30;
       this.above.addChild(sprite);
       return { sprite, index: f.row * level.width + f.col, seed: (i * 1.37) % 6.28 };
     });
@@ -676,6 +689,12 @@ export class Renderer {
     this.hills.y = this.viewH - 110 + lift * 0.6;
     this.trees.tilePosition.x = -this.cam.x * 0.3;
     this.trees.y = this.viewH - 118 + lift;
+    this.woodcut?.update(
+      this.world.position.x,
+      this.world.position.y,
+      this.zoom,
+      this.app.renderer.resolution,
+    );
     this.skyFlash
       .clear()
       .rect(0, 0, this.viewW, this.viewH)
