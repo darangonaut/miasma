@@ -1,100 +1,77 @@
 import type { World } from '@/game/level';
 
 /**
- * Pomalá temná hudba: chorál z filtrovaných píšťal, hlboký bas, smutná melódia sláčika
- * a na začiatku každého cyklu úder umieračika. Skladba sa skladá z cyklov po štyroch
- * akordoch (každý dva takty); melódia sa opakuje s obmenami a občas stíchne.
+ * Gregoriánsky chorál: mužský zbor spieva jednohlasnú melódiu v cirkevnom modu nad
+ * držaným základným tónom (ison). Hlas je pílový signál cez tri formantové filtre
+ * (samohlásky a, o, u, e); traja speváci sú mierne rozladení a každý má iné vibrato.
+ * Frázy sa skladajú ako v žalmovej psalmódii: intonácia k recitačnému tónu, recitácia,
+ * kadencia späť na finálu, nádych. Medzi frázami občas udrie umieračik.
  */
 
-/** Prirodzená mollová a frýgická stupnica (poltóny od základu). */
-const MINOR = [0, 2, 3, 5, 7, 8, 10];
+/** Cirkevné mody (poltóny od finály). */
+const DORIAN = [0, 2, 3, 5, 7, 9, 10];
 const PHRYGIAN = [0, 1, 3, 5, 7, 8, 10];
-/** Mollová pentatonika pre zvonenie svetlušiek a kryštálov. */
+const MIXOLYDIAN = [0, 2, 4, 5, 7, 9, 10];
+/** Pentatonika pre zvonenie uhlíkov. */
 const PENTA = [0, 3, 5, 7, 10];
 
-interface Key {
-  /** Základný tón melódie (Hz); akordy znejú o oktávu nižšie, bas o dve. */
-  root: number;
+interface Mode {
+  /** Finála (Hz), mužský hlas. */
+  finalis: number;
   scale: number[];
-  /** Akordy ako stupne stupnice (0 = i, 5 = VI, 2 = III, 6 = VII, 3 = iv, 4 = v). */
-  chords: number[];
-  bpm: number;
+  /** Recitačný tón (tenor) ako stupeň modu. */
+  tenor: number;
+  /** Trvanie jednej slabiky (s). */
+  beat: number;
+  /** Paralelná kvinta pod melódiou (organum) — v katedrále. */
+  organum: boolean;
 }
 
-const KEYS: Record<World, Key> = {
-  quarter: { root: 196, scale: PHRYGIAN, chords: [0, 5, 1, 0], bpm: 46 },
-  catacombs: { root: 146.83, scale: PHRYGIAN, chords: [0, 1, 0, 6], bpm: 40 },
-  pits: { root: 164.81, scale: MINOR, chords: [0, 3, 5, 4], bpm: 44 },
-  cathedral: { root: 220, scale: MINOR, chords: [0, 5, 3, 4], bpm: 48 },
+const MODES: Record<World, Mode> = {
+  quarter: { finalis: 146.83, scale: DORIAN, tenor: 4, beat: 0.62, organum: false },
+  catacombs: { finalis: 164.81, scale: PHRYGIAN, tenor: 5, beat: 0.75, organum: false },
+  pits: { finalis: 110, scale: DORIAN, tenor: 2, beat: 0.7, organum: false },
+  cathedral: { finalis: 130.81, scale: MIXOLYDIAN, tenor: 4, beat: 0.6, organum: true },
 };
 
-/** Melodické vzorce na jeden akord (8 dôb): [stupeň od základu akordu, dĺžka]; null = pauza. */
-type Pattern = [number | null, number][];
-const P: Record<string, Pattern> = {
-  fall: [
-    [4, 2],
-    [3, 1],
-    [2, 1],
-    [0, 3],
-    [null, 1],
+/** Formanty mužských samohlások: [frekvencia, zosilnenie]. */
+const VOWELS: Record<string, [number, number][]> = {
+  a: [
+    [730, 1],
+    [1090, 0.5],
+    [2440, 0.18],
   ],
-  rise: [
-    [2, 2],
-    [4, 2],
-    [2, 3],
-    [null, 1],
+  o: [
+    [570, 1],
+    [840, 0.45],
+    [2410, 0.12],
   ],
-  arch: [
-    [0, 1],
-    [2, 1],
-    [4, 2],
-    [5, 1],
-    [4, 1],
-    [2, 2],
+  u: [
+    [300, 1],
+    [870, 0.3],
+    [2240, 0.08],
   ],
-  high: [
-    [7, 3],
-    [6, 1],
-    [4, 4],
+  e: [
+    [530, 1],
+    [1840, 0.35],
+    [2480, 0.15],
   ],
-  step: [
-    [4, 2],
-    [2, 2],
-    [1, 2],
-    [0, 2],
-  ],
-  end: [
-    [2, 2],
-    [1, 2],
-    [0, 4],
-  ],
-  rest: [[null, 8]],
 };
+const VOWEL_KEYS = ['a', 'o', 'u', 'e', 'a', 'o'];
 
-/** Poradie cyklov: melódia A, obmena B, znova A, riedka C a nakoniec len akordy. */
-const SONG: Pattern[][] = [
-  [P.fall!, P.rise!, P.fall!, P.end!],
-  [P.high!, P.arch!, P.high!, P.step!],
-  [P.fall!, P.rise!, P.fall!, P.end!],
-  [P.rest!, P.rise!, P.rest!, P.end!],
-  [P.rest!, P.rest!, P.rest!, P.rest!],
-];
-
-function degreeToFreq(key: Key, root: number, degree: number): number {
-  const octave = Math.floor(degree / 7);
-  const step = key.scale[((degree % 7) + 7) % 7]!;
-  return root * 2 ** ((octave * 12 + step) / 12);
-}
+/** Slabika: stupeň modu, dĺžka v dobách, samohláska. */
+type Syllable = [number, number, string];
 
 export class Music {
-  private key: Key = KEYS.quarter;
-  private nextKey: Key | null = null;
-  /** Čas (ctx) začiatku ďalšieho akordu a jeho poradie v skladbe. */
-  private nextChordAt = 0;
-  private chordIndex = 0;
-  private cycle = 0;
+  private mode: Mode = MODES.quarter;
+  private nextMode: Mode | null = null;
+  private nextPhraseAt = 0;
+  private phrase = 0;
+  private seed = 1;
   private drone: GainNode;
   private droneLevel = 0;
+  /** Ison: držaný základ zboru (mení sa s modom). */
+  private ison: { oscs: OscillatorNode[]; gain: GainNode } | null = null;
 
   constructor(
     private readonly ctx: AudioContext,
@@ -115,141 +92,189 @@ export class Music {
       o.connect(this.drone);
       o.start();
     }
-    this.nextChordAt = ctx.currentTime + 0.3;
+    this.nextPhraseAt = ctx.currentTime + 0.5;
+    this.startIson();
   }
 
-  /** Tónina sveta sa zmení na začiatku ďalšieho akordu (prvý raz hneď). */
+  /** Mod sveta sa zmení na začiatku ďalšej frázy. */
   setWorld(world: World): void {
-    const key = KEYS[world];
-    if (key === this.key && !this.nextKey) return;
-    this.nextKey = key;
+    const mode = MODES[world];
+    if (mode === this.mode && !this.nextMode) return;
+    this.nextMode = mode;
   }
 
-  /** Tóny pentatoniky aktuálnej tóniny (pre zvonenie svetlušiek). */
+  /** Tóny pentatoniky aktuálneho modu (pre zvonenie uhlíkov). */
   chimeNote(i: number): number {
-    const root = this.key.root;
+    const root = this.mode.finalis * 2;
     return root * 2 ** ((Math.floor(i / 5) * 12 + PENTA[i % 5]!) / 12);
   }
 
-  /** Volať každý snímok: naplánuje akordy a tóny s predstihom. */
+  /** Volať každý snímok: naplánuje frázy s predstihom. */
   update(tension: number): void {
     const target = tension >= 1 ? 0.05 : tension > 0 ? 0.022 : 0;
     if (target !== this.droneLevel) {
       this.droneLevel = target;
       this.drone.gain.setTargetAtTime(target, this.ctx.currentTime, 1.2);
     }
-    while (this.nextChordAt < this.ctx.currentTime + 0.6) this.scheduleChord(this.nextChordAt);
+    while (this.nextPhraseAt < this.ctx.currentTime + 0.8) this.schedulePhrase(this.nextPhraseAt);
   }
 
-  private scheduleChord(t: number): void {
-    // Pri zmene sveta začne nová tónina hneď od prvého akordu.
-    if (this.nextKey) {
-      this.key = this.nextKey;
-      this.nextKey = null;
-      this.chordIndex = 0;
-      this.cycle = 0;
+  private random(): number {
+    this.seed = (this.seed * 1103515245 + 12345) & 0x7fffffff;
+    return this.seed / 0x7fffffff;
+  }
+
+  private freq(degree: number, base = this.mode.finalis): number {
+    const scale = this.mode.scale;
+    const octave = Math.floor(degree / 7);
+    return base * 2 ** ((octave * 12 + scale[((degree % 7) + 7) % 7]!) / 12);
+  }
+
+  /** Psalmódia: intonácia → recitácia na tenore → kadencia na finálu (alebo na medianu). */
+  private compose(final: boolean): Syllable[] {
+    const tenor = this.mode.tenor;
+    const vowel = () => VOWEL_KEYS[Math.floor(this.random() * VOWEL_KEYS.length)]!;
+    const out: Syllable[] = [];
+    // Intonácia: z finály po stupňoch nahor (občas so skokom).
+    out.push([0, 1, vowel()]);
+    for (let d = tenor > 3 ? 2 : 1; d < tenor; d += this.random() < 0.4 ? 2 : 1)
+      out.push([d, 1, vowel()]);
+    // Recitácia s horným susedom.
+    const n = 3 + Math.floor(this.random() * 4);
+    for (let i = 0; i < n; i++) {
+      const up = i === n - 2 && this.random() < 0.6;
+      out.push([up ? tenor + 1 : tenor, i === n - 1 ? 2 : 1, vowel()]);
     }
-    const key = this.key;
-    const beat = 60 / key.bpm;
-    const length = 8 * beat;
-    const chord = key.chords[this.chordIndex]!;
-    const low = key.root / 2;
+    // Kadencia: dolu po stupňoch, posledná slabika dlhá (neuma).
+    const goal = final ? 0 : Math.max(1, tenor - 2);
+    for (let d = tenor - 1; d > goal; d--) out.push([d, 1, vowel()]);
+    if (final) out.push([1, 1, 'o'], [0, 3, 'u']);
+    else out.push([goal, 3, 'a']);
+    return out;
+  }
 
-    // Akord: tri tóny s pomalým nádychom a dlhým doznením.
-    for (const d of [chord, chord + 2, chord + 4]) this.pad(degreeToFreq(key, low, d), t, length);
-    // Bas: základ akordu o oktávu nižšie.
-    this.bass(degreeToFreq(key, low / 2, chord), t, length);
-    // Umieračik na začiatku každého cyklu.
-    if (this.chordIndex === 0) this.knell(key.root / 2, t);
+  private schedulePhrase(t: number): void {
+    if (this.nextMode) {
+      this.mode = this.nextMode;
+      this.nextMode = null;
+      this.phrase = 0;
+      this.retuneIson(t);
+    }
+    const mode = this.mode;
+    // Každá štvrtá fráza je ticho (len ison a zvon) — chorál dýcha.
+    const silent = this.phrase % 4 === 3;
+    const final = this.phrase % 2 === 1;
+    let length = 6 * mode.beat;
+    if (!silent) {
+      const notes = this.compose(final);
+      length = this.choir(notes, t, mode.finalis);
+      if (mode.organum) this.choir(notes, t, mode.finalis / 1.5, 0.45);
+    }
+    if (this.phrase % 4 === 0) this.knell(mode.finalis / 2, t + length * 0.5);
+    this.phrase++;
+    // Nádych medzi frázami.
+    this.nextPhraseAt = t + length + mode.beat * (1.5 + this.random());
+  }
 
-    // Melódia sláčika.
-    const pattern = SONG[this.cycle % SONG.length]![this.chordIndex]!;
+  /** Zbor troch hlasov spieva frázu legato; vráti jej dĺžku. */
+  private choir(notes: Syllable[], t: number, base: number, level = 1): number {
+    const ctx = this.ctx;
+    const beat = this.mode.beat;
+    const total = notes.reduce((s, [, b]) => s + b * beat, 0);
+    const end = t + total;
+    const voice = ctx.createGain();
+    voice.gain.value = 0;
+    // Formantové filtre (spoloční pre všetkých spevákov).
+    const formants = VOWELS.a!.map(([f, g]) => {
+      const bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.value = f;
+      bp.Q.value = 9;
+      const amp = ctx.createGain();
+      amp.gain.value = g * 2.2;
+      voice.connect(bp).connect(amp);
+      amp.connect(this.out);
+      amp.connect(this.echo);
+      return { bp, amp };
+    });
+    // Envelopa celej frázy a jemné nasadenie každej slabiky.
+    const peak = 0.09 * level;
+    voice.gain.setValueAtTime(0, t);
+    voice.gain.linearRampToValueAtTime(peak, t + 0.25);
+    const oscs: OscillatorNode[] = [];
+    for (const [i, detune] of [-7, 0, 6].entries()) {
+      const o = ctx.createOscillator();
+      o.type = 'sawtooth';
+      o.detune.value = detune;
+      const vib = ctx.createOscillator();
+      vib.frequency.value = 4.6 + i * 0.5;
+      const depth = ctx.createGain();
+      depth.gain.value = 5 + i;
+      vib.connect(depth).connect(o.detune);
+      o.connect(voice);
+      vib.start(t);
+      vib.stop(end + 1);
+      oscs.push(o);
+    }
     let at = t;
-    for (const [rel, beats] of pattern) {
-      if (rel !== null) {
-        let degree = chord + rel;
-        if (degree > 9) degree -= 7;
-        this.viol(degreeToFreq(key, key.root, degree), at, beats * beat);
+    for (const [k, [degree, beats, vowel]] of notes.entries()) {
+      const f = this.freq(degree, base);
+      for (const o of oscs) {
+        if (k === 0) o.frequency.setValueAtTime(f, at);
+        // Krátke portamento do ďalšieho tónu (spevácky prechod).
+        else o.frequency.setTargetAtTime(f, at, 0.03);
+      }
+      VOWELS[vowel]!.forEach(([fr, g], j) => {
+        formants[j]!.bp.frequency.setTargetAtTime(fr, at, 0.05);
+        formants[j]!.amp.gain.setTargetAtTime(g * 2.2, at, 0.05);
+      });
+      if (k > 0) {
+        // Nasadenie slabiky: krátky pokles hlasitosti (spoluhláska).
+        voice.gain.setTargetAtTime(peak * 0.55, at - 0.04, 0.015);
+        voice.gain.setTargetAtTime(peak, at + 0.03, 0.04);
       }
       at += beats * beat;
     }
-
-    this.nextChordAt = t + length;
-    this.chordIndex = (this.chordIndex + 1) % key.chords.length;
-    if (this.chordIndex === 0) this.cycle++;
-  }
-
-  /** Chorál: dve rozladené píly cez tlmiaci filter, znie ako vzdialený organ. */
-  private pad(freq: number, t: number, length: number): void {
-    const ctx = this.ctx;
-    const g = ctx.createGain();
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.value = 520;
-    g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(0.016, t + 2.6);
-    g.gain.setValueAtTime(0.016, t + length - 0.5);
-    g.gain.linearRampToValueAtTime(0, t + length + 2.5);
-    g.connect(filter).connect(this.out);
-    for (const detune of [-8, 8]) {
-      const o = ctx.createOscillator();
-      o.type = 'sawtooth';
-      o.frequency.value = freq;
-      o.detune.value = detune;
-      o.connect(g);
-      o.start(t);
-      o.stop(t + length + 2.6);
-    }
-  }
-
-  private bass(freq: number, t: number, length: number): void {
-    const ctx = this.ctx;
-    const o = ctx.createOscillator();
-    const g = ctx.createGain();
-    o.type = 'sine';
-    o.frequency.value = freq;
-    g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(0.07, t + 1.2);
-    g.gain.setValueAtTime(0.07, t + length - 1);
-    g.gain.linearRampToValueAtTime(0, t + length + 1);
-    o.connect(g).connect(this.out);
-    o.start(t);
-    o.stop(t + length + 1.1);
-  }
-
-  /** Sláčik: pomalý nádych, jemné vibrato a dlhé doznenie v ozvene. */
-  private viol(freq: number, t: number, length: number): void {
-    const ctx = this.ctx;
-    const g = ctx.createGain();
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.value = 1100;
-    filter.Q.value = 0.7;
-    const end = t + Math.max(0.6, length - 0.1);
-    g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(0.034, t + Math.min(0.35, length * 0.4));
-    g.gain.setValueAtTime(0.034, end);
-    g.gain.linearRampToValueAtTime(0, end + 0.9);
-    g.connect(filter);
-    filter.connect(this.out);
-    filter.connect(this.echo);
-    const vibrato = ctx.createOscillator();
-    vibrato.frequency.value = 5.2;
-    const depth = ctx.createGain();
-    depth.gain.value = freq * 0.006;
-    vibrato.connect(depth);
-    for (const detune of [-4, 4]) {
-      const o = ctx.createOscillator();
-      o.type = 'sawtooth';
-      o.frequency.value = freq;
-      o.detune.value = detune;
-      depth.connect(o.frequency);
-      o.connect(g);
+    voice.gain.setTargetAtTime(0, end - 0.3, 0.25);
+    for (const o of oscs) {
       o.start(t);
       o.stop(end + 1);
     }
-    vibrato.start(t);
-    vibrato.stop(end + 1);
+    return total;
+  }
+
+  /** Ison: tichý držaný tón zboru na „o“ (finála o oktávu nižšie a kvinta). */
+  private startIson(): void {
+    const ctx = this.ctx;
+    const gain = ctx.createGain();
+    gain.gain.value = 0;
+    gain.gain.setTargetAtTime(0.03, ctx.currentTime, 2);
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = 570;
+    bp.Q.value = 3;
+    const low = ctx.createBiquadFilter();
+    low.type = 'lowpass';
+    low.frequency.value = 900;
+    gain.connect(bp).connect(this.out);
+    gain.connect(low).connect(this.out);
+    const oscs = [0.5, 0.75, 0.5].map((mult, i) => {
+      const o = ctx.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.value = this.mode.finalis * mult;
+      o.detune.value = [-5, 0, 5][i]!;
+      o.connect(gain);
+      o.start();
+      return o;
+    });
+    this.ison = { oscs, gain };
+  }
+
+  private retuneIson(t: number): void {
+    if (!this.ison) return;
+    [0.5, 0.75, 0.5].forEach((mult, i) =>
+      this.ison!.oscs[i]!.frequency.setTargetAtTime(this.mode.finalis * mult, t, 0.6),
+    );
   }
 
   /** Umieračik: zvon s neharmonickými alikvotami, dlho doznieva. */
