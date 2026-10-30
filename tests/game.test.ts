@@ -16,7 +16,7 @@ import { LEVELS } from '@/game/levels';
 
 const DT = 1 / 60;
 
-function make(rows: string[], hints?: string[], world: LevelDef['world'] = 'forest'): Game {
+function make(rows: string[], hints?: string[], world: LevelDef['world'] = 'quarter'): Game {
   const def: LevelDef = { id: 'test', name: 'test', world, rows, hints };
   return new Game(parseLevel(def));
 }
@@ -33,7 +33,7 @@ describe('levely', () => {
   it('všetky sa dajú načítať a majú štart, vatru a svetlušky', () => {
     for (const def of LEVELS) {
       const level = parseLevel(def);
-      expect(level.fireflies.length).toBeGreaterThan(3);
+      expect(level.fireflies.length).toBeGreaterThan(1);
       expect(level.exit.x).toBeGreaterThan(level.start.x);
     }
   });
@@ -148,14 +148,17 @@ describe('svetlo', () => {
     expect(events.some((e) => e.type === 'shadeDie')).toBe(true);
   });
 
-  it('tieň v tme zraní a ukradne olej', () => {
+  it('prízrak sa pred výpadom zastaví a varuje, potom zabije na jeden zásah', () => {
     const game = make(['    s       ', ' P         E', '############']);
-    let hurt = false;
-    for (let t = 0; t < 15 && !hurt; t += DT) {
+    const order: string[] = [];
+    for (let t = 0; t < 15 && game.state === 'play'; t += DT) {
       game.oil = 60;
-      hurt = game.step(DT, NO_INPUT).some((e) => e.type === 'hurt');
+      for (const e of game.step(DT, NO_INPUT))
+        if (e.type === 'windup' || e.type === 'lunge' || e.type === 'died') order.push(e.type);
     }
-    expect(hurt).toBe(true);
+    expect(order.slice(0, 2)).toEqual(['windup', 'lunge']);
+    expect(order).toContain('died');
+    expect(game.deaths).toBe(1);
   });
 });
 
@@ -341,14 +344,14 @@ describe('nové svety', () => {
       '              P              E',
       '##############################',
     ];
-    const standing = make(rows, undefined, 'storm');
+    const standing = make(rows, undefined, 'pits');
     run(standing, 5);
     const x = standing.player.x;
     run(standing, 1);
     expect(standing.wind).toBe(-1);
     expect(standing.player.x).toBe(x);
 
-    const jumping = make(rows, undefined, 'storm');
+    const jumping = make(rows, undefined, 'pits');
     run(jumping, 5);
     const x0 = jumping.player.x;
     run(jumping, 0.5, { jump: true });
@@ -359,7 +362,7 @@ describe('nové svety', () => {
     const game = make(
       ['                    ', '          P#       E', '####################'],
       undefined,
-      'storm',
+      'pits',
     );
     run(game, 5);
     expect(game.wind).toBe(-1);
@@ -370,7 +373,52 @@ describe('nové svety', () => {
     expect(game.sheltered).toBe(false);
   });
 
-  it('mimo búrky nefúka', () => {
+  it('nakazený chodí, nespadne z hrany a pri dotyku zabije', () => {
+    // Nakazený na rímse nad hráčom ho nevidí, len sa prechádza a z hrany nespadne.
+    const game = make([
+      '              g          ',
+      '             #####       ',
+      ' P                      E',
+      '#########################',
+    ]);
+    const g = game.ghouls[0]!;
+    const y = g.y;
+    let minX = g.x;
+    let maxX = g.x;
+    for (let t = 0; t < 20; t += DT) {
+      game.step(DT, NO_INPUT);
+      minX = Math.min(minX, g.x);
+      maxX = Math.max(maxX, g.x);
+    }
+    expect(minX).toBeGreaterThanOrEqual(13 * TILE);
+    expect(maxX).toBeLessThanOrEqual(18 * TILE);
+    expect(maxX - minX).toBeGreaterThan(TILE);
+    expect(g.y).toBe(y);
+    const fresh = make(['                     ', ' P         g        E', '#####################']);
+    const events = run(fresh, 8);
+    expect(events.some((e) => e.type === 'ghoulNotice')).toBe(true);
+    expect(events.some((e) => e.type === 'died' && e.cause === 'ghoul')).toBe(true);
+  });
+
+  it('nakazeného zabije skok na hlavu, iskra aj rozžiarená fakľa', () => {
+    const stomp = make(['                ', ' P     g       E', '################']);
+    const g = stomp.ghouls[0]!;
+    stomp.player.x = g.x - 4;
+    stomp.player.y = g.y - 14 - 30;
+    stomp.player.vy = 200;
+    expect(run(stomp, 0.3).some((e) => e.type === 'stomp')).toBe(true);
+    expect(g.alive).toBe(false);
+
+    const spark = make([' P      g       E', '#################']);
+    const events = [...spark.step(DT, { ...NO_INPUT, spark: true }), ...run(spark, 1)];
+    expect(events.some((e) => e.type === 'ghoulDie')).toBe(true);
+
+    const flare = make([' P   g          E', '#################']);
+    expect(run(flare, 1.5, { flare: true }).some((e) => e.type === 'ghoulDie')).toBe(true);
+    expect(flare.state).toBe('play');
+  });
+
+  it('mimo cintorína nefúka', () => {
     const game = make(FLAT);
     run(game, 6);
     expect(game.wind).toBe(0);

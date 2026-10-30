@@ -1,17 +1,18 @@
 /**
  * Level z ASCII mapy. Každý znak je jedno políčko 16×16 px:
  *
- *   #  zem / skala          -  drevená lávka (stúpiš na ňu zdola)
- *   =  svetelná plošina (pevná len vo svetle)
- *   ^  tŕne                 P  štart
- *   f  svetluška            *  svetelný kryštál (tajomstvo)
- *   L  lampa (checkpoint)   E  vatra na konci
- *   s  tieň                 m  mora (pije olej)
- *   w  voda (smrteľná)      c  drobiaci sa kameň
- *   i  ľad (šmykľavý)       b  skákacia huba (vymrští)
- *   v  cencúľ (spadne)      S  veľký tieň (3 zásahy)
- *   H  pohyblivá plošina ↔  V  pohyblivá plošina ↕ (2 políčka široká, 4 políčka dráha)
- *   1–9  tabuľa s radou
+ *   #  kameň / murivo       -  trám (stúpiš naň zdola)
+ *   =  svetelná plošina (pevná len vo svetle; Miasma ju zatiaľ nepoužíva)
+ *   ^  železné hroty        P  štart
+ *   f  uhlík (smola do fakle) *  relikvia (tajomstvo)
+ *   L  kaplnka (checkpoint) E  hranica na konci
+ *   s  morový prízrak       m  roj múch (dusí fakľu)
+ *   w  žumpa (smrteľná)     c  zhnité dosky (prelomia sa)
+ *   i  slizký kameň (šmykľavý) b  napnutá plachta (vymrští)
+ *   v  uvoľnený kus muriva (spadne)  S  veľký prízrak (3 zásahy)
+ *   g  nakazený (chodí po zemi, zabije dotykom)
+ *   H  visiaca plošina ↔    V  visiaca plošina ↕ (2 políčka široká, 4 políčka dráha)
+ *   1–9  odkaz na stene s radou
  */
 export const TILE = 16;
 
@@ -27,7 +28,7 @@ export enum Tile {
   Bounce,
 }
 
-export type World = 'forest' | 'caves' | 'swamp' | 'ice' | 'tower' | 'abyss' | 'storm';
+export type World = 'quarter' | 'catacombs' | 'pits' | 'cathedral';
 
 /** Pevná zem (aj ľad a huba): na nej sa stojí a cez ňu sa neprejde. */
 export function isGround(tile: Tile): boolean {
@@ -71,6 +72,7 @@ export interface Level {
   shades: Point[];
   bigShades: Point[];
   moths: Point[];
+  ghouls: Point[];
   icicles: Point[];
   movers: MoverDef[];
   signs: Sign[];
@@ -111,6 +113,7 @@ export function parseLevel(def: LevelDef): Level {
     shades: [],
     bigShades: [],
     moths: [],
+    ghouls: [],
     icicles: [],
     movers: [],
     signs: [],
@@ -135,6 +138,7 @@ export function parseLevel(def: LevelDef): Level {
       else if (ch === 'L') level.lanterns.push(c);
       else if (ch === 's') level.shades.push(c);
       else if (ch === 'm') level.moths.push(c);
+      else if (ch === 'g') level.ghouls.push(c);
       else if (ch === 'S') level.bigShades.push(c);
       else if (ch === 'v') level.icicles.push(c);
       else if (ch === 'H' || ch === 'V')
@@ -150,7 +154,7 @@ export function parseLevel(def: LevelDef): Level {
     }
   });
   if (!hasStart) throw new Error(`Level ${def.id}: chýba štart P`);
-  if (!hasExit) throw new Error(`Level ${def.id}: chýba vatra E`);
+  if (!hasExit) throw new Error(`Level ${def.id}: chýba hranica E`);
   return level;
 }
 

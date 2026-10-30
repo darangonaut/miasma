@@ -1,16 +1,17 @@
-import { Game, MOVER_W, NO_INPUT, PLAYER_H, PLAYER_W, calmLeft, type Input } from '@/game/game';
+import { Game, MOVER_W, NO_INPUT, PLAYER_H, PLAYER_W, calmLeft, hasWind, type Input } from '@/game/game';
 import { TILE, Tile, isGround, tileAt } from '@/game/level';
 
 /**
  * Jednoduchý bot: beží doprava a skáče pred stenou, priepasťou a tŕňmi; na pohyblivé
- * plošiny počká a nechá sa odviezť. Overuje len geometriu (olej dopĺňa, tiene a mory
- * vypína). Vráti, či došiel k vatre, najďalší stĺpec a počet pádov.
+ * plošiny počká a nechá sa odviezť. Overuje len geometriu (smolu dopĺňa, prízraky, muchy
+ * a nakazených vypína). Vráti, či došiel k vatre, najďalší stĺpec a počet pádov.
  */
 export function botRun(game: Game, seconds = 600): { done: boolean; col: number; deaths: number } {
   const dt = 1 / 60;
   let hold = 0;
   let best = 0;
   const level = game.level;
+  const windy = hasWind(level.world);
   const solidish = (c: number, r: number) => {
     const tile = tileAt(level, c, r);
     return (
@@ -28,6 +29,7 @@ export function botRun(game: Game, seconds = 600): { done: boolean; col: number;
     game.oil = 100;
     for (const s of game.shades) s.alive = false;
     for (const m of game.moths) m.alive = false;
+    for (const g of game.ghouls) g.alive = false;
     const p = game.player;
     const front = Math.floor((p.x + PLAYER_W + 4) / TILE);
     const ahead = (d: number) => Math.floor((p.x + PLAYER_W + d) / TILE);
@@ -46,8 +48,8 @@ export function botRun(game: Game, seconds = 600): { done: boolean; col: number;
       continue;
     }
 
-    // Búrka: na pevnej zemi počká, kým vietor utíchne a do ďalšieho nárazu je dosť času.
-    if (level.world === 'storm' && p.onGround && game.onMover < 0) {
+    // Vietor: na pevnej zemi počká, kým vietor utíchne a do ďalšieho nárazu je dosť času.
+    if (windy && p.onGround && game.onMover < 0) {
       const under = tileAt(level, Math.floor((p.x + PLAYER_W / 2) / TILE), feet);
       if (under !== Tile.Crumble && under !== Tile.Ice && (game.wind !== 0 || calmLeft(game.time) < 1.6)) {
         hold = 0;
@@ -73,8 +75,7 @@ export function botRun(game: Game, seconds = 600): { done: boolean; col: number;
       const atEdge = p.x + PLAYER_W >= cur.x + MOVER_W - 4;
       const reach = next && next.x <= p.x + PLAYER_W + 36 && Math.abs(next.y - feetY) <= 8;
       // V búrke zo plošiny neskáče, kým fúka.
-      const windy = level.world === 'storm' && (game.wind !== 0 || calmLeft(game.time) < 1);
-      if (windy) step({});
+      if (windy && (game.wind !== 0 || calmLeft(game.time) < 1)) step({});
       else if (target) step({ right: true, jump: target.r < feet });
       else if (next && reach && atEdge) step({ right: true, jump: true });
       else if (next && !atEdge) step({ right: true });

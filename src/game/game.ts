@@ -1,4 +1,4 @@
-import { TILE, Tile, isGround, tileAt, type Level, type Point, type Sign } from './level';
+import { TILE, Tile, isGround, tileAt, type Level, type Point, type Sign, type World } from './level';
 import { Rng } from './rng';
 
 export interface Input {
@@ -39,24 +39,24 @@ const APEX_GRAVITY = 0.45;
 export const PLAYER_W = 8;
 export const PLAYER_H = 13;
 
-// --- Svetlo a olej ---
+// --- Fakľa a smola (v kóde „olej“) ---
+// Miasma je tvrdšia než Lumen: fakľa horí rýchlejšie, uhlíkov je menej a svetlo je menšie.
 export const OIL_MAX = 100;
-export const OIL_DRAIN = 0.95;
-export const FLARE_DRAIN = 16;
-export const FIREFLY_OIL = 8;
-const SHADE_HIT_OIL = 18;
-export const LIGHT_RADIUS = 50;
-export const FLARE_RADIUS = 150;
-export const EMBER_RADIUS = 20;
-export const LANTERN_RADIUS = 72;
-export const SPARK_OIL = 4;
+export const OIL_DRAIN = 1.5;
+export const FLARE_DRAIN = 20;
+export const FIREFLY_OIL = 12;
+export const LIGHT_RADIUS = 44;
+export const FLARE_RADIUS = 140;
+export const EMBER_RADIUS = 18;
+export const LANTERN_RADIUS = 64;
+export const SPARK_OIL = 6;
 const SPARK_SPEED = 190;
 const SPARK_LIFE = 0.8;
 const SPARK_COOLDOWN = 0.35;
 export const SPARK_RADIUS = 34;
 const STOMP_BOUNCE = 210;
 /** Koľko oleja za sekundu vypije jedna mora prisatá k lampášu. */
-export const MOTH_DRAIN = 4;
+export const MOTH_DRAIN = 7;
 const CRUMBLE_DELAY = 0.6;
 /** Skákacia huba vymrští asi o 6 políčok. */
 export const BOUNCE_SPEED = 340;
@@ -70,8 +70,20 @@ export const MOVER_W = 32;
 export const MOVER_H = 5;
 const MOVER_RANGE = 64;
 const MOVER_TRIP = 2.2;
+/** Počasie podľa sveta: blesky nad mestom a cintorínom, vietor len na otvorenom cintoríne. */
+const WEATHER: Record<World, { wind: boolean; lightning: boolean }> = {
+  quarter: { wind: false, lightning: true },
+  catacombs: { wind: false, lightning: false },
+  pits: { wind: true, lightning: true },
+  cathedral: { wind: false, lightning: false },
+};
+
+export function hasWind(world: World): boolean {
+  return WEATHER[world].wind;
+}
+
 /**
- * Vietor (Búrlivý vrch): bezvetrie → zosilnenie → náraz → slabnutie, stále dokola.
+ * Vietor (Morové jamy): bezvetrie → zosilnenie → náraz → slabnutie, stále dokola.
  * Vo vzduchu hráča odfukuje, pri chôdzi ho brzdí alebo poháňa; kto stojí, toho neodfúkne.
  */
 const WIND_CALM = 3.2;
@@ -113,7 +125,16 @@ function smooth(x: number): number {
 export const BIG_SHADE_HITS = 3;
 const CRUMBLE_RESPAWN = 3;
 /** Koľko sekúnd vydrží hráč v úplnej tme (bez oleja), kým ho tma pohltí. */
-export const DREAD_LIMIT = 4;
+export const DREAD_LIMIT = 3;
+/** Prízrak sa pred výpadom na chvíľu zastaví a oči mu sčervenajú (férové varovanie). */
+export const WINDUP = 0.45;
+// --- Nakazení: chodia po zemi, nespadnú z hrany, zabijú dotykom ---
+export const GHOUL_W = 8;
+export const GHOUL_H = 14;
+const GHOUL_WALK = 16;
+const GHOUL_CHASE = 46;
+/** Ako ďaleko (px) zbadajú fakľu navyše k jej polomeru. */
+const GHOUL_SIGHT = 64;
 const RESPAWN_DELAY = 1.1;
 
 export type GameEvent =
@@ -134,14 +155,17 @@ export type GameEvent =
   | { type: 'icicle'; x: number; y: number }
   | { type: 'shatter'; x: number; y: number }
   | { type: 'shadeHit'; x: number; y: number }
+  | { type: 'windup' }
   | { type: 'lunge' }
+  | { type: 'ghoulNotice'; x: number; y: number }
+  | { type: 'ghoulDie'; x: number; y: number }
   | { type: 'gust'; dir: number }
   | { type: 'lightning' }
   | { type: 'died'; cause: DeathCause }
   | { type: 'respawn' }
   | { type: 'exit' };
 
-export type DeathCause = 'thorns' | 'fall' | 'dark' | 'water' | 'icicle';
+export type DeathCause = 'thorns' | 'fall' | 'dark' | 'water' | 'icicle' | 'shade' | 'ghoul';
 
 export interface Player {
   /** Ľavý horný roh hitboxu. */
@@ -164,7 +188,7 @@ export interface Shade {
   active: boolean;
   /** 0–1, svetlo ho spaľuje. */
   hp: number;
-  state: 'stalk' | 'lunge' | 'recoil';
+  state: 'stalk' | 'windup' | 'lunge' | 'recoil';
   timer: number;
   angle: number;
   dirX: number;
@@ -174,6 +198,23 @@ export interface Shade {
   /** Veľký tieň: vydrží viac zásahov. */
   big: boolean;
   hits: number;
+}
+
+/** Nakazený: x je stred, y sú chodidlá. */
+export interface Ghoul {
+  x: number;
+  y: number;
+  home: Point;
+  dir: 1 | -1;
+  vx: number;
+  alive: boolean;
+  /** Zbadal fakľu a ide po hráčovi. */
+  chasing: boolean;
+  /** 0–1, rozžiarená fakľa ho spaľuje. */
+  hp: number;
+  burning: boolean;
+  /** Fáza chôdze (pre animáciu). */
+  step: number;
 }
 
 export interface Icicle {
@@ -256,6 +297,7 @@ export class Game {
   readonly lanterns: Lantern[];
   readonly shades: Shade[];
   readonly moths: Moth[];
+  readonly ghouls: Ghoul[];
   readonly sparks: Spark[] = [];
   readonly crumbles: Crumble[] = [];
   private crumbleAt = new Map<number, Crumble>();
@@ -354,6 +396,21 @@ export class Game {
       phase: this.rng.next() * Math.PI * 2,
       hp: 1,
     }));
+    this.ghouls = level.ghouls.map((p) => {
+      const feet = p.y + TILE / 2;
+      return {
+        x: p.x,
+        y: feet,
+        home: { x: p.x, y: feet },
+        dir: -1,
+        vx: 0,
+        alive: true,
+        chasing: false,
+        hp: 1,
+        burning: false,
+        step: 0,
+      };
+    });
     level.tiles.forEach((tile, i) => {
       if (tile !== Tile.Crumble) return;
       const c: Crumble = {
@@ -374,7 +431,7 @@ export class Game {
 
   /** Poloha plameňa (lampáš v ruke pred hráčom). */
   get lamp(): Point {
-    return { x: this.player.x + PLAYER_W / 2 + this.player.facing * 5, y: this.player.y + 6 };
+    return { x: this.player.x + PLAYER_W / 2 + this.player.facing * 5, y: this.player.y + 4 };
   }
 
   get fireflyCount(): number {
@@ -417,6 +474,7 @@ export class Game {
       if (this.deadTimer <= 0) this.respawn();
       this.updateShades(dt);
       this.updateMoths(dt);
+      this.updateGhouls(dt);
       this.updateSparks(dt);
       this.updateCrumbles(dt);
       this.updateMovers();
@@ -433,17 +491,21 @@ export class Game {
     this.updateSparks(dt);
     if (this.state === 'play') this.updateShades(dt);
     if (this.state === 'play') this.updateMoths(dt);
+    if (this.state === 'play') this.updateGhouls(dt);
     if (this.state === 'play') this.collect();
     return this.events;
   }
 
-  /** Vietor a blesky; len na Búrlivom vrchu. */
+  /** Vietor a blesky podľa sveta. */
   private updateWeather(dt: number): void {
-    if (this.level.world !== 'storm') return;
-    const before = this.wind;
-    this.wind = windAt(this.time);
-    if (before === 0 && this.wind !== 0)
-      this.events.push({ type: 'gust', dir: Math.sign(this.wind) });
+    const weather = WEATHER[this.level.world];
+    if (weather.wind) {
+      const before = this.wind;
+      this.wind = windAt(this.time);
+      if (before === 0 && this.wind !== 0)
+        this.events.push({ type: 'gust', dir: Math.sign(this.wind) });
+    }
+    if (!weather.lightning) return;
     // Blesk: dve bliknutia a pomalé doznievanie.
     this.strikeAge += dt;
     const a = this.strikeAge;
@@ -803,6 +865,12 @@ export class Game {
         this.killMoth(m);
         hit = true;
       }
+      for (const g of this.ghouls) {
+        if (!g.alive || Math.abs(g.x - sp.x) > 6 || sp.y < g.y - GHOUL_H - 2 || sp.y > g.y + 2)
+          continue;
+        this.killGhoul(g);
+        hit = true;
+      }
       if (blocked || hit || sp.life <= 0) {
         this.sparks.splice(i, 1);
         if (!hit) this.events.push({ type: 'fizzle', x: sp.x, y: sp.y });
@@ -935,18 +1003,26 @@ export class Game {
         const ty = c.y + Math.sin(s.angle) * reach * 0.8;
         steer(s, tx, ty, 48, dt);
         if (s.timer <= 0 && dist < reach + 70 && this.state === 'play') {
+          s.state = 'windup';
+          s.timer = WINDUP;
+          this.events.push({ type: 'windup' });
+        }
+      } else if (s.state === 'windup') {
+        // Zastaví sa a zachveje; smer výpadu si zvolí až na konci.
+        s.vx *= Math.exp(-dt * 10);
+        s.vy *= Math.exp(-dt * 10);
+        if (s.timer <= 0) {
           s.state = 'lunge';
-          s.timer = 0.75;
+          s.timer = 0.7;
           s.dirX = dx / dist;
           s.dirY = dy / dist;
           this.events.push({ type: 'lunge' });
         }
       } else if (s.state === 'lunge') {
-        const speed = s.burning ? 70 : 125;
+        const speed = s.burning ? 70 : 135;
         s.vx = s.dirX * speed;
         s.vy = s.dirY * speed;
-        if (dist < (s.big ? 16 : 10) && this.player.invulnerable <= 0 && this.state === 'play')
-          this.hurt(s);
+        if (dist < (s.big ? 15 : 9) && this.state === 'play') this.die('shade');
         else if (s.timer <= 0) this.recoil(s);
       } else {
         steer(s, s.x - dx, s.y - dy, 64, dt);
@@ -958,7 +1034,7 @@ export class Game {
       }
       // Odpor vzduchu.
       const drag = Math.exp(-dt * 3);
-      if (s.state !== 'lunge') {
+      if (s.state === 'stalk' || s.state === 'recoil') {
         s.vx *= drag;
         s.vy *= drag;
       }
@@ -972,15 +1048,87 @@ export class Game {
     s.timer = 0.8;
   }
 
-  private hurt(s: Shade): void {
+  /** Nakazení: chodia sem a tam, keď zbadajú fakľu, idú po hráčovi; z hrany nespadnú. */
+  private updateGhouls(dt: number): void {
     const p = this.player;
-    this.oil = Math.max(0, this.oil - SHADE_HIT_OIL);
-    p.invulnerable = 1.2;
-    p.vx = Math.sign(p.x + PLAYER_W / 2 - s.x || 1) * 140;
-    p.vy = -150;
+    const alive = this.state === 'play';
+    const pcx = p.x + PLAYER_W / 2;
+    const pFeet = p.y + PLAYER_H;
+    for (const g of this.ghouls) {
+      if (!g.alive) continue;
+      if (alive && this.tryStompGhoul(g)) continue;
+      const dx = pcx - g.x;
+      const sameFloor = Math.abs(pFeet - g.y) < 26;
+      const sees = alive && sameFloor && Math.abs(dx) < this.radius + GHOUL_SIGHT;
+      if (sees && !g.chasing) this.events.push({ type: 'ghoulNotice', x: g.x, y: g.y - GHOUL_H });
+      g.chasing = sees;
+
+      // Rozžiarená fakľa ich páli a zaháňa.
+      const lamp = this.lamp;
+      g.burning =
+        alive && this.flaring && Math.hypot(lamp.x - g.x, lamp.y - (g.y - 7)) < this.radius * 0.9;
+      if (g.burning) {
+        g.hp -= dt * 1.7;
+        if (g.hp <= 0) {
+          this.killGhoul(g);
+          continue;
+        }
+      } else g.hp = Math.min(1, g.hp + dt * 0.25);
+
+      let want = 0;
+      if (g.burning) want = -Math.sign(dx || 1) * GHOUL_CHASE * 0.6;
+      else if (g.chasing) want = Math.sign(dx) * GHOUL_CHASE;
+      else want = g.dir * GHOUL_WALK;
+      if (want !== 0 && !g.burning) g.dir = want > 0 ? 1 : -1;
+      g.vx = approach(g.vx, want, 260 * dt);
+      const nx = g.x + g.vx * dt;
+      if (this.ghoulBlocked(nx, g.y, Math.sign(g.vx))) {
+        g.vx = 0;
+        if (!g.chasing) g.dir = g.dir > 0 ? -1 : 1;
+      } else g.x = nx;
+      g.step += Math.abs(g.vx) * dt;
+
+      if (
+        alive &&
+        Math.abs(g.x - pcx) < (GHOUL_W + PLAYER_W) / 2 - 1 &&
+        pFeet > g.y - GHOUL_H + 2 &&
+        p.y < g.y
+      )
+        this.die('ghoul');
+    }
+  }
+
+  /** Stena, priepasť, hroty alebo žumpa pred nakazeným. */
+  private ghoulBlocked(x: number, feet: number, dir: number): boolean {
+    if (dir === 0) return false;
+    const col = Math.floor((x + dir * (GHOUL_W / 2)) / TILE);
+    const row = Math.floor((feet - 1) / TILE);
+    const level = this.level;
+    const body = [row, Math.floor((feet - GHOUL_H + 1) / TILE)];
+    if (body.some((r) => isGround(tileAt(level, col, r)) || tileAt(level, col, r) === Tile.Crumble))
+      return true;
+    if (body.some((r) => tileAt(level, col, r) === Tile.Thorns || tileAt(level, col, r) === Tile.Water))
+      return true;
+    const below = tileAt(level, col, row + 1);
+    return !(isGround(below) || below === Tile.Ledge || below === Tile.Crumble);
+  }
+
+  private tryStompGhoul(g: Ghoul): boolean {
+    const p = this.player;
+    if (p.vy <= 0) return false;
+    const feet = p.y + PLAYER_H;
+    const top = g.y - GHOUL_H;
+    if (Math.abs(p.x + PLAYER_W / 2 - g.x) > 8 || feet < top - 2 || feet > top + 6) return false;
+    this.killGhoul(g);
+    p.vy = -(this.jumpHeld ? JUMP_SPEED : STOMP_BOUNCE);
     p.onGround = false;
-    this.events.push({ type: 'hurt' });
-    this.recoil(s);
+    this.events.push({ type: 'stomp', x: g.x, y: top });
+    return true;
+  }
+
+  private killGhoul(g: Ghoul): void {
+    g.alive = false;
+    this.events.push({ type: 'ghoulDie', x: g.x, y: g.y - GHOUL_H / 2 });
   }
 
   private collect(): void {
@@ -1042,6 +1190,14 @@ export class Game {
       m.y = m.home.y;
       m.vx = m.vy = 0;
       m.drinking = false;
+    }
+    for (const g of this.ghouls) {
+      g.x = g.home.x;
+      g.y = g.home.y;
+      g.vx = 0;
+      g.dir = -1;
+      g.chasing = false;
+      g.hp = 1;
     }
     for (const s of this.shades) {
       if (!s.alive) continue;
