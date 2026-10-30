@@ -82,7 +82,7 @@ export const HERB_MAX = 3;
 /** Ako blízko musí byť preživší, aby mu dal bylinu (a aby sa ukázala prosba). */
 const SURVIVOR_REACH = 18;
 export const NEST_LIGHT = 52;
-export const OIL_DRAIN = 3;
+export const OIL_DRAIN = 2;
 export const FLARE_DRAIN = 20;
 export const FIREFLY_OIL = 12;
 export const LIGHT_RADIUS = 44;
