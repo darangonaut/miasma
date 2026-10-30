@@ -592,17 +592,28 @@ def extend(lv, world, id_, diff, extra, hints):
     pool = WORLD_BLOCKS[world]
     # Na cintoríne sa čaká na vietor, preto dve kaplnky; inde jedna v polovici.
     shrines = [old + extra // 3, old + 2 * extra // 3] if world == 'pits' else [old + extra // 2]
+    # Morové hniezda (n): treba ich spáliť, inak sa hranica na konci nezapáli.
+    count = 2 + diff // 6
+    nests = [old + extra * (k + 1) // (count + 1) - 3 for k in range(count)]
     last = None
     while g.x < old + extra:
         kind = rng.choice([k for k in pool if k != last])
         last = kind
         g.block(kind)
         g.flat(rng.randint(2, 4))
+        if nests and g.x >= nests[0]:
+            nests.pop(0)
+            g.flat(3, rock=False)
+            g.put(g.x - 1, g.y - 1, 'n')
+            # Uhlík pri hniezde vráti smolu za iskru.
+            g.gap_ember(g.x - 3, g.y - 1)
+            g.flat(3, rock=False)
         if shrines and g.x >= shrines[0]:
             shrines.pop(0)
             g.flat(2)
             g.put(g.x - 1, g.y - 1, 'L')
             g.flat(3)
+    assert not nests, id_
     g.flat(6, ember=False, rock=False)
     assert g.put(g.x - 3, g.y - 1, 'E'), id_
     lv.w = g.x

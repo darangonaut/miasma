@@ -107,6 +107,7 @@ export class Renderer {
     crumble: Texture.EMPTY,
     barricade: Texture.EMPTY,
     herb: Texture.EMPTY,
+    nest: [Texture.EMPTY, Texture.EMPTY],
     fog: Texture.EMPTY,
     bounce: [Texture.EMPTY, Texture.EMPTY],
     icicle: Texture.EMPTY,
@@ -122,6 +123,7 @@ export class Renderer {
   private crumbleSprites: { sprite: Sprite; col: number; row: number }[] = [];
   private barricadeSprites: { sprite: Sprite; fire: Sprite }[] = [];
   private herbSprites: Sprite[] = [];
+  private nestSprites: { sprite: Sprite; fire: Sprite[] }[] = [];
   /** Chumáče miazmy: jeden na políčko, mierne sa vlnia. */
   private fogSprites: { sprite: Sprite; index: number; seed: number }[] = [];
   private waterSprites: { sprite: Sprite; col: number }[] = [];
@@ -206,6 +208,7 @@ export class Renderer {
     this.tex.crumble = art.crumble();
     this.tex.barricade = art.barricade();
     this.tex.herb = art.herb();
+    this.tex.nest = [art.nest(false), art.nest(true)];
     this.tex.fog = art.fogPuff();
     this.tex.moon = art.moon();
     this.tex.bounce = [art.bounce(false), art.bounce(true)];
@@ -355,6 +358,21 @@ export class Renderer {
       s.position.set(f.x, f.y);
       this.above.addChild(s);
       return s;
+    });
+    this.nestSprites = game.nests.map((n) => {
+      const sprite = new Sprite(this.tex.nest[0]);
+      sprite.anchor.set(0.5, 1);
+      sprite.position.set(n.x, n.y + TILE / 2);
+      this.level.addChild(sprite);
+      const fire = [-5, 0, 5].map((dx) => {
+        const f = new Sprite(this.tex.flame[0]);
+        f.anchor.set(0.5, 1);
+        f.position.set(n.x + dx, n.y + TILE / 2 - 2);
+        f.visible = false;
+        this.above.addChild(f);
+        return f;
+      });
+      return { sprite, fire };
     });
     this.herbSprites = game.herbs.map((hb) => {
       const s = new Sprite(this.tex.herb);
@@ -541,6 +559,14 @@ export class Renderer {
         case 'burnt':
           this.burst(e.x, e.y, 10, C.shadeInner, 40, false);
           this.burst(e.x, e.y, 6, C.flame, 40, true);
+          break;
+        case 'nestIgnite':
+          this.shake = 2;
+          this.burst(e.x, e.y, 16, C.flameRed, 60, true);
+          break;
+        case 'nestBurnt':
+          this.burst(e.x, e.y, 18, C.shadeInner, 40, false);
+          this.burst(e.x, e.y, 10, C.flame, 50, true);
           break;
         case 'herb':
           this.burst(e.x, e.y, 14, 0xc8f0a0, 50, true);
@@ -812,6 +838,18 @@ export class Renderer {
         fire.scale.set(k, k * (1 + Math.sin(t * 20 + i) * 0.1));
         sprite.tint = 0xff9a60;
       }
+    });
+    game.nests.forEach((n, i) => {
+      const { sprite, fire } = this.nestSprites[i]!;
+      sprite.texture = this.tex.nest[n.state === 'ash' ? 1 : 0]!;
+      fire.forEach((f, k) => {
+        f.visible = n.state === 'burning';
+        if (!f.visible) return;
+        f.texture = this.tex.flame[(Math.floor(t * 12) + k) % 3]!;
+        const grow = Math.min(1, n.timer * 2) * (1 - Math.max(0, n.timer - 2) * 1.5);
+        const sc = (k === 1 ? 1.5 : 1.1) * Math.max(0.2, grow);
+        f.scale.set(sc, sc * (1 + Math.sin(t * 19 + k) * 0.12));
+      });
     });
     game.herbs.forEach((hb, i) => {
       const s = this.herbSprites[i]!;
@@ -1086,6 +1124,11 @@ export class Renderer {
     // Oči nakazených trochu presvitajú tmou, aby bolo vidieť, odkiaľ idú.
     for (const g of game.ghouls)
       if (g.alive) glow(g.x + g.dir * 3, g.y - GHOUL_H + 4, 6, C.plague, 0.25);
+    for (const n of game.nests) {
+      if (n.state !== 'burning') continue;
+      light(n.x, n.y, 52 * flicker);
+      glow(n.x, n.y, 40, WARM, 0.2);
+    }
     for (const b of game.barricades) {
       if (b.state !== 'burning') continue;
       light(b.col * TILE + 8, b.row * TILE + 8, BARRICADE_LIGHT * flicker);

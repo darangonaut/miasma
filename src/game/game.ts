@@ -70,6 +70,9 @@ const BARRICADE_BURN = 1.1;
 /** Po koľkých sekundách horenia preskočí oheň na susedné dosky. */
 const BARRICADE_SPREAD = 0.35;
 export const BARRICADE_LIGHT = 46;
+// --- Morové hniezda: kopy tiel a slamy, ktoré treba spáliť ---
+const NEST_BURN = 2.6;
+export const NEST_LIGHT = 52;
 export const OIL_DRAIN = 3;
 export const FLARE_DRAIN = 20;
 export const FIREFLY_OIL = 12;
@@ -229,6 +232,9 @@ export type GameEvent =
   | { type: 'shield'; on: boolean }
   | { type: 'fogBurn'; x: number; y: number }
   | { type: 'gust'; dir: number }
+  | { type: 'nestIgnite'; x: number; y: number }
+  | { type: 'nestBurnt'; x: number; y: number }
+  | { type: 'gateLocked'; left: number }
   | { type: 'bellWarn' }
   | { type: 'bell' }
   | { type: 'lightning' }
@@ -350,6 +356,11 @@ export interface Barricade {
   timer: number;
 }
 
+export interface Nest extends Point {
+  state: 'intact' | 'burning' | 'ash';
+  timer: number;
+}
+
 export interface Pickup extends Point {
   taken: boolean;
 }
@@ -392,6 +403,9 @@ export class Game {
   readonly barricades: Barricade[] = [];
   private barricadeAt = new Map<number, Barricade>();
   readonly herbs: Pickup[];
+  readonly nests: Nest[];
+  /** Hráč stojí pri zatvorenej hranici (aby sa upozornenie neopakovalo). */
+  private atGate = false;
   /** Hustota miazmy po políčkach (0–1) a jej pôvodná hodnota (dorastá späť). */
   readonly fog: Float32Array;
   private fogHome: Float32Array;
@@ -528,6 +542,7 @@ export class Game {
       };
     });
     this.herbs = level.herbs.map((p) => ({ ...p, taken: false }));
+    this.nests = level.nests.map((p) => ({ ...p, state: 'intact', timer: 0 }));
     this.fog = new Float32Array(level.width * level.height);
     for (const f of level.fog) this.fog[f.row * level.width + f.col] = 1;
     this.fogHome = this.fog.slice();
@@ -570,6 +585,10 @@ export class Game {
     return this.fireflies.filter((f) => f.taken).length;
   }
 
+  get nestsBurnt(): number {
+    return this.nests.filter((n) => n.state !== 'intact').length;
+  }
+
   get crystalCount(): number {
     return this.crystals.filter((c) => c.taken).length;
   }
@@ -590,6 +609,8 @@ export class Game {
           y: b.row * TILE + TILE / 2,
           radius: BARRICADE_LIGHT,
         });
+    for (const n of this.nests)
+      if (n.state === 'burning') lights.push({ x: n.x, y: n.y, radius: NEST_LIGHT });
     return lights;
   }
 
@@ -715,9 +736,12 @@ export class Game {
     } else {
       this.dread = Math.max(0, this.dread - dt * 3);
     }
-    // Rozžiarená fakľa podpáli barikády nablízku.
+    // Rozžiarená fakľa podpáli barikády a hniezda nablízku.
     if (this.flaring) {
       const lamp = this.lamp;
+      for (const n of this.nests)
+        if (n.state === 'intact' && Math.hypot(n.x - lamp.x, n.y - lamp.y) < this.radius * 0.5)
+          this.igniteNest(n);
       for (const b of this.barricades) {
         if (b.state !== 'solid') continue;
         const bx = b.col * TILE + TILE / 2;
@@ -727,6 +751,12 @@ export class Game {
     }
   }
 
+  private igniteNest(n: Nest): void {
+    n.state = 'burning';
+    n.timer = 0;
+    this.events.push({ type: 'nestIgnite', x: n.x, y: n.y });
+  }
+
   private ignite(b: Barricade): void {
     if (b.state !== 'solid') return;
     b.state = 'burning';
@@ -734,8 +764,16 @@ export class Game {
     this.events.push({ type: 'ignite', x: b.col * TILE + TILE / 2, y: b.row * TILE + TILE / 2 });
   }
 
-  /** Horiace barikády zhoria a oheň sa šíri na susedné. */
+  /** Horiace barikády zhoria a oheň sa šíri na susedné; hniezda zhoria na popol. */
   private updateBarricades(dt: number): void {
+    for (const n of this.nests) {
+      if (n.state !== 'burning') continue;
+      n.timer += dt;
+      if (n.timer >= NEST_BURN) {
+        n.state = 'ash';
+        this.events.push({ type: 'nestBurnt', x: n.x, y: n.y });
+      }
+    }
     const w = this.level.width;
     for (const b of this.barricades) {
       if (b.state !== 'burning') continue;
@@ -1102,10 +1140,15 @@ export class Game {
       const barricade =
         tile === Tile.Barricade ? this.barricadeAt.get(row * this.level.width + col) : undefined;
       if (barricade?.state === 'solid') this.ignite(barricade);
+      const nest = this.nests.find(
+        (n) => n.state === 'intact' && Math.abs(n.x - sp.x) < 7 && Math.abs(n.y - sp.y) < 9,
+      );
+      if (nest) this.igniteNest(nest);
       const blocked =
         isGround(tile) ||
         tile === Tile.Water ||
         (barricade !== undefined && barricade.state !== 'gone') ||
+        nest !== undefined ||
         (tile === Tile.Crumble &&
           this.crumbleAt.get(row * this.level.width + col)?.state !== 'gone');
       let hit = false;
@@ -1330,6 +1373,8 @@ export class Game {
     for (const b of this.barricades)
       if (b.state === 'burning')
         calls.push({ x: b.col * TILE + TILE / 2, y: b.row * TILE + 8, r: FIRE_CALL, t: 1.5 });
+    for (const n of this.nests)
+      if (n.state === 'burning') calls.push({ x: n.x, y: n.y, r: FIRE_CALL, t: 1.5 });
     this.noises = [];
     for (const g of this.ghouls) {
       if (!g.alive) continue;
@@ -1538,7 +1583,14 @@ export class Game {
       this.events.push({ type: 'lantern', x: l.x, y: l.y });
     }
     const exit = this.level.exit;
-    if (Math.abs(exit.x - c.x) < 14 && Math.abs(exit.y - c.y) < 40) {
+    const atExit = Math.abs(exit.x - c.x) < 14 && Math.abs(exit.y - c.y) < 40;
+    // Hranica sa zapáli, až keď sú všetky morové hniezda v štvrti spálené.
+    const left = this.nests.filter((n) => n.state === 'intact').length;
+    if (atExit && left > 0) {
+      if (!this.atGate) this.events.push({ type: 'gateLocked', left });
+      this.atGate = true;
+    } else if (!atExit) this.atGate = false;
+    if (atExit && left === 0) {
       this.exitLit = true;
       this.state = 'done';
       this.player.vx = 0;

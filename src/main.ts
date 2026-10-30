@@ -345,6 +345,10 @@ function onEvents(events: GameEvent[]): void {
       window.setTimeout(() => (hurt.style.opacity = '0'), 160);
     } else if (e.type === 'died') {
       showToast(t(DEATHS[e.cause]!));
+    } else if (e.type === 'gateLocked') {
+      showToast(t('gateLocked', { n: e.left }));
+    } else if (e.type === 'nestBurnt') {
+      if (game && game.nestsBurnt === game.nests.length) showToast(t('nestsDone'));
     } else if (e.type === 'bell') {
       showToast(hintText('bellToll'));
     } else if (e.type === 'exit') {
@@ -364,6 +368,7 @@ function updateHud(g: Game): void {
     oilWarned = true;
     showToast(t('oilLow'));
   }
+  $('.nests').textContent = g.nests.length ? `♨ ${g.nestsBurnt}/${g.nests.length}` : '';
   $('.fireflies').textContent = `✶ ${g.fireflyCount}/${g.fireflies.length}`;
   $('.crystals').textContent = g.crystals.length ? `✝ ${g.crystalCount}/${g.crystals.length}` : '';
   // Morový zvon: pásik sa plní do ďalšieho úderu, pri besnení sa vyprázdňuje.

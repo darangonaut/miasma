@@ -268,6 +268,16 @@ export class Sound {
         case 'gust':
           this.noise(1.2, 700, 0.08, 'bandpass');
           break;
+        case 'nestIgnite':
+          this.noise(0.6, 900, 0.12);
+          this.sweep(120, 260, 'sawtooth', 0.05, 0.5);
+          break;
+        case 'nestBurnt':
+          this.noise(0.5, 300, 0.1);
+          break;
+        case 'gateLocked':
+          this.sweep(110, 70, 'square', 0.08, 0.3);
+          break;
         case 'bellWarn':
           this.bell(0.025, 0);
           break;

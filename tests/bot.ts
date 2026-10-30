@@ -90,6 +90,27 @@ export function botRun(
       continue;
     }
 
+    // Morové hniezdo pred ním: vo výške plameňa ho podpáli iskrou, inak rozžiarením zblízka.
+    const lamp = game.lamp;
+    const nest = game.nests.find(
+      (n) => n.state === 'intact' && n.x > lamp.x - 6 && n.x - lamp.x < 100,
+    );
+    if (nest && p.onGround && game.onMover < 0) {
+      const row = Math.floor(lamp.y / TILE);
+      let clear = true;
+      for (let c = Math.floor(lamp.x / TILE) + 1; c < Math.floor(nest.x / TILE); c++)
+        if (isGround(tileAt(level, c, row)) || tileAt(level, c, row) === Tile.Barricade)
+          clear = false;
+      if (Math.abs(nest.y - lamp.y) < 8 && clear) {
+        step({ spark: game.sparks.length === 0 && Math.floor(game.time * 4) % 2 === 0 });
+        continue;
+      }
+      if (Math.hypot(nest.x - lamp.x, nest.y - lamp.y) < 64) {
+        step({ flare: true });
+        continue;
+      }
+    }
+
     // Barikáda pred ním: podpáli ju iskrou a počká, kým zhorí.
     const barricade = [4, 20, 36].some((d) =>
       [row, row - 1].some((r) => {

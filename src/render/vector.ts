@@ -574,6 +574,65 @@ function barricade(): Texture {
   });
 }
 
+/** Morové hniezdo: kopa zavinutých tiel na slame, nad ňou kôl s morovou zástavou. */
+function nest(ash: boolean): Texture {
+  return paint(22, 16, (ctx) => {
+    ctx.fillStyle = ash ? '#1c1714' : '#2a2018';
+    // Slama.
+    ctx.beginPath();
+    ctx.moveTo(1, 16);
+    ctx.quadraticCurveTo(4, 11.5, 11, 11);
+    ctx.quadraticCurveTo(18, 11.5, 21, 16);
+    ctx.closePath();
+    ctx.fill();
+    if (ash) {
+      // Spálené: tlejúce zvyšky a kosti.
+      ctx.fillStyle = '#3a2a20';
+      for (const [x, y, r] of [
+        [7, 14, 1.3],
+        [12, 13.5, 1.6],
+        [16, 14.5, 1.1],
+      ] as const)
+        circle(ctx, x, y, r);
+      ctx.strokeStyle = '#a89878';
+      line(ctx, 9, 14.6, 13, 13.4, 0.5);
+      return;
+    }
+    // Zavinuté telá (rubáše).
+    ctx.fillStyle = '#c8bca0';
+    ctx.strokeStyle = '#3a3026';
+    for (const [x, y, w, a] of [
+      [7, 11.5, 6.5, -0.15],
+      [14, 11.8, 6, 0.2],
+      [10.5, 9.2, 6.2, -0.05],
+    ] as const) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(a);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, w / 2, 1.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      for (let k = -1; k <= 1; k++) line(ctx, k * 1.6, -1.4, k * 1.6 + 0.4, 1.4, 0.3);
+      ctx.restore();
+    }
+    // Kôl so zástavou s morovým krížom.
+    ctx.strokeStyle = INK_CSS;
+    line(ctx, 18.5, 15, 18.5, 1, 0.7);
+    ctx.fillStyle = '#d8ccb0';
+    ctx.beginPath();
+    ctx.moveTo(18.8, 1.4);
+    ctx.lineTo(13.2, 2.2);
+    ctx.lineTo(14.2, 4.2);
+    ctx.lineTo(13, 6.2);
+    ctx.lineTo(18.8, 5.6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#a8241a';
+    line(ctx, 16.2, 2.4, 16.2, 5.2, 0.7);
+    line(ctx, 14.9, 3.7, 17.5, 3.6, 0.7);
+  });
+}
+
 /** Liečivé byliny: zväzok bledozelených lístkov, slabo žiari. */
 function herb(): Texture {
   return paint(9, 10, (ctx) => {
@@ -1294,6 +1353,7 @@ export const vectorArt: Art = {
   sign,
   lightTile,
   rat,
+  nest,
   cane,
   spark,
   water,

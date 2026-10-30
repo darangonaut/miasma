@@ -32,6 +32,7 @@ export interface Art {
   sign(): Texture;
   lightTile(): Texture;
   rat(frame: number): Texture;
+  nest(ash: boolean): Texture;
   cane(): Texture;
   spark(): Texture;
   water(frame: number, world: World): Texture;

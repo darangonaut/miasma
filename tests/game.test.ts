@@ -607,6 +607,21 @@ describe('nové svety', () => {
     expect(hidden.ghouls[0]!.lure).toBe(spot);
   });
 
+  it('hranica sa nezapáli, kým sú v štvrti nespálené morové hniezda', () => {
+    const game = make([' P      n       E', '#################']);
+    const events = run(game, 4, { right: true });
+    expect(events.some((e) => e.type === 'gateLocked')).toBe(true);
+    expect(game.state).toBe('play');
+    // Vráti sa, podpáli hniezdo iskrou a hranica sa zapáli.
+    const fire = make([' P      n       E', '#################']);
+    const ev = [...fire.step(DT, { ...NO_INPUT, spark: true }), ...run(fire, 4)];
+    expect(ev.some((e) => e.type === 'nestIgnite')).toBe(true);
+    expect(ev.some((e) => e.type === 'nestBurnt')).toBe(true);
+    expect(fire.nestsBurnt).toBe(1);
+    run(fire, 4, { right: true });
+    expect(fire.state).toBe('done');
+  });
+
   it('mimo cintorína nefúka', () => {
     const game = make(FLAT);
     run(game, 6);

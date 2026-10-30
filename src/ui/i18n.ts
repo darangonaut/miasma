@@ -40,7 +40,8 @@ const en = {
     'Your fire gives you away: the bigger the flame, the farther the infected see you. One touch kills. Strike them with your cane (V) — two blows, or one into a pit.',
   hintGhoulTouch:
     'Your fire gives you away: the bigger the flame, the farther the infected see you. One touch kills. Strike them with your cane ⚚ — two blows, or one into a pit.',
-  hintExit: 'At the end of every path, light the pyre. Fire purifies.',
+  hintExit:
+    'Burn every plague nest in the quarter (♨) with a spark or a flare. Only then will the pyre at the end light.',
   hintAwning: 'Stretched canvas throws you high. Hold jump to float further.',
   hintPlanks: 'Rotten planks give way beneath you. Don’t stop.',
   hintWraith:
@@ -73,6 +74,8 @@ const en = {
   diedMiasma: 'The miasma choked you…',
   diedRats: 'The rats ate you alive…',
   oilLow: 'The torch is dying!',
+  gateLocked: 'The pyre won’t light — {n} plague nests still smoulder in the quarter (♨).',
+  nestsDone: 'All plague nests are burnt. Light the pyre!',
   bellToll: 'The plague bell! The infected pour into the streets — hide the torch (↓).',
   bellTollTouch: 'The plague bell! The infected pour into the streets — hide the torch ◐.',
   diedThorns: 'Impaled…',
@@ -143,7 +146,8 @@ const sk: Record<Key, string> = {
     'Oheň ťa prezrádza: čím väčší plameň, tým zďaleka ťa nakazení vidia. Dotyk zabije. Udri ich palicou (V) — dva údery, alebo jeden do priepasti.',
   hintGhoulTouch:
     'Oheň ťa prezrádza: čím väčší plameň, tým zďaleka ťa nakazení vidia. Dotyk zabije. Udri ich palicou ⚚ — dva údery, alebo jeden do priepasti.',
-  hintExit: 'Na konci každej cesty zapáľ hranicu. Oheň očisťuje.',
+  hintExit:
+    'Spáľ v štvrti všetky morové hniezda (♨) iskrou alebo rozžiarením. Až potom sa hranica na konci zapáli.',
   hintAwning: 'Napnutá plachta ťa vymrští vysoko. Podrž skok a doletíš ďalej.',
   hintPlanks: 'Zhnité dosky sa pod tebou prelomia. Nezastavuj.',
   hintWraith:
@@ -175,6 +179,8 @@ const sk: Record<Key, string> = {
   diedMiasma: 'Udusila ťa miazma…',
   diedRats: 'Zožrali ťa potkany…',
   oilLow: 'Fakľa dohára!',
+  gateLocked: 'Hranica sa nezapáli — v štvrti ešte tlie morových hniezd: {n} (♨).',
+  nestsDone: 'Všetky morové hniezda zhoreli. Zapáľ hranicu!',
   bellToll: 'Morový zvon! Nakazení sa vyrojili do ulíc — ukry fakľu (↓).',
   bellTollTouch: 'Morový zvon! Nakazení sa vyrojili do ulíc — ukry fakľu ◐.',
   diedThorns: 'Nabodnutý…',
@@ -243,7 +249,8 @@ const cs: Record<Key, string> = {
     'Oheň tě prozrazuje: čím větší plamen, tím zdálky tě nakažení vidí. Dotek zabíjí. Uhoď je holí (V) — dvě rány, nebo jedna do propasti.',
   hintGhoulTouch:
     'Oheň tě prozrazuje: čím větší plamen, tím zdálky tě nakažení vidí. Dotek zabíjí. Uhoď je holí ⚚ — dvě rány, nebo jedna do propasti.',
-  hintExit: 'Na konci každé cesty zapal hranici. Oheň očišťuje.',
+  hintExit:
+    'Spal ve čtvrti všechna morová hnízda (♨) jiskrou nebo rozzářením. Teprve potom hranice na konci vzplane.',
   hintAwning: 'Napnutá plachta tě vymrští vysoko. Podrž skok a doletíš dál.',
   hintPlanks: 'Shnilá prkna se pod tebou prolomí. Nezastavuj.',
   hintWraith:
@@ -275,6 +282,8 @@ const cs: Record<Key, string> = {
   diedMiasma: 'Udusila tě miazma…',
   diedRats: 'Sežraly tě krysy…',
   oilLow: 'Pochodeň dohořívá!',
+  gateLocked: 'Hranice nevzplane — ve čtvrti ještě doutná morových hnízd: {n} (♨).',
+  nestsDone: 'Všechna morová hnízda shořela. Zapal hranici!',
   bellToll: 'Morový zvon! Nakažení se vyrojili do ulic — schovej pochodeň (↓).',
   bellTollTouch: 'Morový zvon! Nakažení se vyrojili do ulic — schovej pochodeň ◐.',
   diedThorns: 'Nabodnutý…',

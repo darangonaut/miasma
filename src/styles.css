@@ -259,6 +259,11 @@ button.big:hover {
   line-height: 1;
 }
 
+.nests {
+  margin-right: 10px;
+  color: var(--ink);
+}
+
 .fireflies {
   color: var(--vermilion);
 }
