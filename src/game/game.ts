@@ -200,6 +200,10 @@ export const BELL_FRENZY = 6;
 const BELL_RANGE = 360;
 /** Varovanie pred zvonom (prvý vzdialený úder). */
 export const BELL_WARN = 3;
+/** Zvon mimo poradia: raz za level udrie bez varovania a na chvíľu všetko strnie. */
+export const STRAY_STILL = 1.8;
+/** Po strnutí nakazení v dosahu zvonu hľadajú miesto, kde lekár stál (s). */
+const STRAY_LURE = 4;
 // --- Potkany: boja sa svetla, ale keď fakľa zhasne alebo ju ukryješ, roztrhajú ťa ---
 export const RAT_W = 6;
 export const RAT_H = 4;
@@ -259,6 +263,7 @@ export type GameEvent =
   | { type: 'gateLocked'; left: number }
   | { type: 'bellWarn' }
   | { type: 'bell' }
+  | { type: 'strayBell' }
   | { type: 'lightning' }
   | { type: 'died'; cause: DeathCause }
   | { type: 'respawn' }
@@ -498,6 +503,10 @@ export class Game {
   /** Čas ďalšieho úderu zvonu a zostávajúci čas besnenia po ňom. */
   nextBell = BELL_FIRST;
   frenzy = 0;
+  /** Kedy udrie zvon mimo poradia (raz za level) a koľko ešte trvá strnutie. */
+  strayAt: number;
+  still = 0;
+  private strayFrom: Point = { x: 0, y: 0 };
   private events: GameEvent[] = [];
 
   /** Smola horí pomalšie s väčšou ampulkou, miazma nakazí pomalšie s lepšou maskou. */
@@ -514,6 +523,8 @@ export class Game {
     this.herbsCarried = herbs;
     this.rng = new Rng(hash(level.id));
     this.skyRng = new Rng(hash(level.id) ^ 0x5bd1e995);
+    // Medzi prvým a druhým riadnym úderom, inde v každom leveli.
+    this.strayAt = BELL_FIRST + BELL_PERIOD * 0.4 + (hash(level.id) % 11);
     this.checkpoint = { ...level.start };
     this.player = {
       x: 0,
@@ -740,9 +751,12 @@ export class Game {
     this.useHerb(input);
     for (const s of this.survivors) if (s.state === 'saved') s.timer += dt;
     this.updateCarts(dt);
-    if (this.state === 'play') this.updateShades(dt);
-    if (this.state === 'play') this.updateRats(dt);
-    if (this.state === 'play') this.updateGhouls(dt);
+    this.updateStray(dt);
+    // Počas strnutia po zvone mimo poradia sa nehýbe nič okrem lekára.
+    const frozen = this.still > 0;
+    if (this.state === 'play' && !frozen) this.updateShades(dt);
+    if (this.state === 'play' && !frozen) this.updateRats(dt);
+    if (this.state === 'play' && !frozen) this.updateGhouls(dt);
     if (this.state === 'play') this.collect();
     return this.events;
   }
@@ -886,6 +900,36 @@ export class Game {
       g.lureTime = BELL_FRENZY;
       this.events.push({ type: 'ghoulNotice', x: g.x, y: g.y - GHOUL_H });
     }
+  }
+
+  /**
+   * Zvon mimo poradia: jeden úder bez varovania, potom krátke ticho, v ktorom strnú prízraky,
+   * potkany aj nakazení. Keď sa svet pohne, nakazení v dosahu zvonu idú hľadať miesto, kde
+   * lekár stál pri údere. Neudrie tesne pred riadnym zvonom ani počas besnenia.
+   */
+  private updateStray(dt: number): void {
+    if (this.still > 0) {
+      this.still -= dt;
+      if (this.still > 0) return;
+      this.still = 0;
+      const from = this.strayFrom;
+      for (const g of this.ghouls) {
+        if (!g.alive || Math.hypot(g.x - from.x, g.y - 8 - from.y) > BELL_RANGE) continue;
+        g.lure = from.x;
+        g.lureTime = STRAY_LURE;
+        this.events.push({ type: 'ghoulNotice', x: g.x, y: g.y - GHOUL_H });
+      }
+      return;
+    }
+    if (this.state !== 'play' || this.time < this.strayAt) return;
+    if (this.frenzy > 0 || this.nextBell - this.time < 12) {
+      this.strayAt = this.time + 5;
+      return;
+    }
+    this.strayAt = Infinity;
+    this.still = STRAY_STILL;
+    this.strayFrom = this.center;
+    this.events.push({ type: 'strayBell' });
   }
 
   /** Je hráč v závetrí? Stačí skala do dvoch políčok na strane, odkiaľ fúka. */
@@ -1850,6 +1894,7 @@ export class Game {
     this.dread = 0;
     this.infection = 0;
     this.frenzy = 0;
+    this.still = 0;
     // Po smrti dostane hráč pokoj: zvon udrie až po celej perióde.
     this.nextBell = Math.max(this.nextBell, this.time + BELL_PERIOD * 0.6);
     this.fog.set(this.fogHome);

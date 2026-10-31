@@ -326,6 +326,11 @@ export class Sound {
         case 'bell':
           [0, 1.7, 3.4].forEach((d) => this.bell(0.11, d));
           break;
+        case 'strayBell':
+          // Puknutý zvon: nižší, rozladený úder a po ňom ticho.
+          this.bell(0.14, 0, 61.7);
+          this.bell(0.05, 0.02, 64.3);
+          break;
         case 'lightning':
           this.noise(0.25, 3000, 0.12, 'highpass');
           this.thunder(0.35 + Math.random() * 0.6);
@@ -371,8 +376,7 @@ export class Sound {
   }
 
   /** Veľký zvon: neharmonické alikvoty, dlhé doznievanie. */
-  private bell(volume: number, delay: number): void {
-    const base = 73.42;
+  private bell(volume: number, delay: number, base = 73.42): void {
     for (const [mult, v, decay] of [
       [0.5, 0.7, 7],
       [1, 1, 5],

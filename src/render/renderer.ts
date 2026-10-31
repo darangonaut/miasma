@@ -625,6 +625,10 @@ export class Renderer {
         case 'saved':
           this.burst(e.x, e.y, 20, 0xfff0d0, 50, true);
           break;
+        case 'strayBell':
+          this.shake = 4;
+          this.ring(c.x, c.y);
+          break;
         case 'cartTwitch':
           this.burst(e.x, e.y, 4, C.shadeInner, 20, false);
           break;
@@ -750,7 +754,8 @@ export class Renderer {
     const lights = game.lights();
     this.updateCamera(dt);
     this.updateActors(dt, lights);
-    this.updateParticles(dt);
+    // Zvon mimo poradia: dážď a prach zamrznú vo vzduchu.
+    this.updateParticles(game.still > 0 ? dt * 0.02 : dt);
     this.updateDarkness();
   }
 
@@ -1156,7 +1161,11 @@ export class Renderer {
     this.darkFill
       .clear()
       .rect(0, 0, this.viewW, this.viewH)
-      .fill({ color: 0x04030a, alpha: this.darkness * (1 - game.flash * 0.75) });
+      // Strnutie po zvone mimo poradia: tma na chvíľu ustúpi a pomaly sa vráti.
+      .fill({
+        color: 0x04030a,
+        alpha: this.darkness * (1 - game.flash * 0.75 - Math.min(0.4, game.still * 0.3)),
+      });
     this.app.renderer.render({ container: this.darkFill, target: this.dark, clear: true });
 
     let used = 0;

@@ -476,6 +476,8 @@ function onEvents(events: GameEvent[]): void {
       showToast(t('gateLocked', { n: e.left }));
     } else if (e.type === 'nestBurnt') {
       if (game && game.nestsBurnt === game.nests.length) showToast(t('nestsDone'));
+    } else if (e.type === 'strayBell') {
+      showToast(t('strayBell'));
     } else if (e.type === 'bell') {
       showToast(hintText('bellToll'));
     } else if (e.type === 'exit') {

@@ -703,6 +703,38 @@ describe('nové svety', () => {
     expect(carts).toBeGreaterThanOrEqual(8);
   });
 
+  it('zvon mimo poradia: bez varovania, svet strnie, potom nakazení hľadajú miesto úderu', async () => {
+    const { STRAY_STILL } = await import('@/game/game');
+    const game = make([' P                  g            E', '##################################']);
+    expect(game.strayAt).toBeGreaterThan(40);
+    expect(game.strayAt).toBeLessThan(game.nextBell + 50);
+    game.nextBell = 999;
+    game.strayAt = 0.5;
+    const g = game.ghouls[0]!;
+    const before = run(game, 0.6);
+    expect(before.some((e) => e.type === 'strayBell')).toBe(true);
+    expect(before.some((e) => e.type === 'bellWarn')).toBe(false);
+    expect(game.still).toBeGreaterThan(0);
+    const x = g.x;
+    run(game, STRAY_STILL * 0.8);
+    expect(g.x).toBe(x);
+    expect(game.state).toBe('play');
+    run(game, STRAY_STILL * 0.4);
+    expect(game.still).toBe(0);
+    expect(g.lureTime).toBeGreaterThan(0);
+    expect(g.lure).toBeLessThan(g.x);
+    // Len raz za level.
+    expect(run(game, 60).some((e) => e.type === 'strayBell')).toBe(false);
+  });
+
+  it('zvon mimo poradia neudrie tesne pred riadnym zvonom', () => {
+    const game = make(FLAT);
+    game.strayAt = 0.2;
+    game.nextBell = 5;
+    expect(run(game, 1).some((e) => e.type === 'strayBell')).toBe(false);
+    expect(game.strayAt).toBeGreaterThan(1);
+  });
+
   it('výbava z lekárne: ampulka, maska a okutá palica', () => {
     const rows = [' P                  E', '#####################'];
     const perks = { flask: 2, mask: 2, cane: 1 };
