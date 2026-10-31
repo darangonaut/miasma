@@ -633,6 +633,84 @@ function nest(ash: boolean): Texture {
   });
 }
 
+/**
+ * Voz s mŕtvolami: dvojkolesová kára s rúčkami, na nej kopa zavinutých tiel. Keď sa jedno
+ * posadí (`risen`), na vrchu ostane prázdne miesto a zhodená plachta. Kolesá na y = 16.
+ */
+function cart(risen: boolean): Texture {
+  return paint(30, 17, (ctx) => {
+    ctx.fillStyle = INK_CSS;
+    ctx.strokeStyle = INK_CSS;
+    // Rúčky (oje) šikmo k zemi.
+    line(ctx, 3, 9.5, -0.5, 15.5, 1);
+    line(ctx, 26, 9.5, 30, 15.5, 1);
+    // Korba z dosák.
+    ctx.fillStyle = '#2a1e14';
+    ctx.fillRect(3, 8.5, 23, 4);
+    ctx.strokeStyle = '#140e0a';
+    for (const x of [8.5, 14.5, 20.5]) line(ctx, x, 8.7, x, 12.3, 0.4);
+    line(ctx, 3, 10.5, 26, 10.5, 0.3);
+    // Telá v rubášoch.
+    ctx.fillStyle = '#c8bca0';
+    ctx.strokeStyle = '#3a3026';
+    const bodies: [number, number, number, number][] = [
+      [8.5, 7.2, 9, -0.08],
+      [19, 7.4, 9.5, 0.1],
+      [13.5, 5.2, 9, 0.04],
+    ];
+    if (!risen) bodies.push([16, 3.4, 8, -0.12]);
+    for (const [x, y, w, a] of bodies) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(a);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, w / 2, 1.7, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Obrys, aby bol rubáš vidno aj vo svetle (v drevoreze je svetlo farbou papiera).
+      ctx.lineWidth = 0.45;
+      ctx.stroke();
+      for (let k = -1; k <= 1; k++) line(ctx, k * 2, -1.5, k * 2 + 0.4, 1.5, 0.3);
+      ctx.restore();
+    }
+    // Visiaca ruka spod rubáša.
+    ctx.strokeStyle = '#8a7a64';
+    line(ctx, 23.5, 8.2, 24.6, 11.6, 0.7);
+    if (risen) {
+      // Zhodená plachta cez okraj korby.
+      ctx.fillStyle = '#b0a488';
+      ctx.beginPath();
+      ctx.moveTo(10, 4.6);
+      ctx.quadraticCurveTo(5, 5, 2.4, 9.5);
+      ctx.lineTo(4.4, 10);
+      ctx.quadraticCurveTo(7, 6.6, 12, 5.6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#3a3026';
+      ctx.lineWidth = 0.4;
+      ctx.stroke();
+    }
+    // Kolesá s lúčmi.
+    ctx.strokeStyle = INK_CSS;
+    for (const x of [8, 21]) {
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(x, 13, 3.4, 0, Math.PI * 2);
+      ctx.stroke();
+      for (let k = 0; k < 3; k++) {
+        const a = (k * Math.PI) / 3;
+        line(
+          ctx,
+          x - Math.cos(a) * 3.2,
+          13 - Math.sin(a) * 3.2,
+          x + Math.cos(a) * 3.2,
+          13 + Math.sin(a) * 3.2,
+          0.45,
+        );
+      }
+    }
+  });
+}
+
 /** Preživší: kľačiaca postava v plachte so zopnutými rukami; chodidlá na y = 14. */
 function survivor(): Texture {
   return paint(12, 15, (ctx) => {
@@ -1441,6 +1519,7 @@ export const vectorArt: Art = {
   key,
   coin,
   survivor,
+  cart,
   nest,
   cane,
   spark,

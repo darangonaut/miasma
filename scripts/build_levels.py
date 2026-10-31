@@ -631,6 +631,8 @@ def extend(lv, world, id_, diff, extra, hints):
     souls = [old + extra * (2 * k + 1) // (2 * (1 + diff // 8) + 1) for k in range(1 + diff // 8)]
     # Pivnica s kľúčom (tretina) a dom so zamknutými dverami (dve tretiny) od druhého levelu.
     secrets = [] if diff == 0 else [(old + extra // 4, 'cellar'), (old + 3 * extra // 5, 'house')]
+    # Voz s mŕtvolami (C): jedno telo sa posadí (mimo katakomb, tam je krysí príliv).
+    carts = [] if diff == 0 or world == 'catacombs' else [old + 2 * extra // 5]
     last = None
     while g.x < old + extra:
         kind = rng.choice([k for k in pool if k != last])
@@ -647,6 +649,11 @@ def extend(lv, world, id_, diff, extra, hints):
             g.flat(6, ember=False, rock=False)
             g.put(g.x - 2, g.y - 1, 'u')
             g.flat(3, rock=False)
+        while carts and g.x >= carts[0]:
+            carts.pop(0)
+            g.flat(4, rock=False)
+            assert g.put(g.x - 2, g.y - 1, 'C'), id_
+            g.flat(6, ember=False, rock=False)
         while nests and g.x >= nests[0]:
             nests.pop(0)
             g.flat(3, rock=False)
@@ -659,7 +666,7 @@ def extend(lv, world, id_, diff, extra, hints):
             g.flat(2)
             g.put(g.x - 1, g.y - 1, 'L')
             g.flat(3)
-    assert not nests and not souls and not secrets, id_
+    assert not nests and not souls and not secrets and not carts, id_
     g.flat(6, ember=False, rock=False)
     assert g.put(g.x - 3, g.y - 1, 'E'), id_
     lv.w = g.x
@@ -669,7 +676,7 @@ def extend(lv, world, id_, diff, extra, hints):
         lv.ceiling(old, lv.w - 1)
 
 
-SHRINE_GAP = 45
+SHRINE_GAP = 42
 
 
 def add_shrines(lv, id_):
@@ -679,7 +686,7 @@ def add_shrines(lv, id_):
         return sorted(x for r in lv.g for x, c in enumerate(r) if c == ch)
     start = col_of('P')[0]
     end = col_of('E')[0]
-    danger = set('^wcbxHV~gsSE')
+    danger = set('^wcbxHV~gsSEC')
 
     def spot(x):
         for row in range(2, H):
@@ -709,7 +716,7 @@ def add_shrines(lv, id_):
     # Kontrola: nikde nesmie ostať príliš dlhý úsek bez kaplnky.
     pts = [start] + col_of('L') + [end]
     worst = max(b - a for a, b in zip(pts, pts[1:]))
-    assert worst <= SHRINE_GAP + 25, (id_, worst)
+    assert worst <= 65, (id_, worst)
 
 
 for i, (world, id_, name, hints, lv) in enumerate(levels):

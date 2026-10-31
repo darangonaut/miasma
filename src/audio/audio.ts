@@ -213,6 +213,22 @@ export class Sound {
             this.tone(this.note(n), 'sine', 0.06, 1.6, this.echo ?? this.master!, i * 0.12),
           );
           break;
+        case 'cartTwitch':
+          // Vŕzganie voza: krátke trhané škrípanie dreva.
+          this.sweep(320, 260, 'sawtooth', 0.025, 0.25);
+          this.noiseAt(0.3, 0.12, 900, 0.03);
+          break;
+        case 'cartRise':
+          this.noise(0.4, 700, 0.1);
+          if (e.survivor) {
+            // Preživší zalapá po dychu a rozkašle sa.
+            this.noise(0.5, 1400, 0.06, 'bandpass');
+            [0.5, 0.75, 1].forEach((d) => this.noiseAt(d, 0.15, 650, 0.07));
+          } else {
+            this.groan();
+            this.sweep(70, 140, 'sawtooth', 0.06, 0.9);
+          }
+          break;
         case 'turned':
           this.groan();
           this.sweep(200, 60, 'sawtooth', 0.07, 1);

@@ -209,6 +209,11 @@ const RAT_WANDER = 18;
 const RAT_SIGHT = 150;
 /** Potkany sa držia od plameňa ďalej, než je polomer svetla mínus táto rezerva. */
 export const RAT_DARE = 16;
+/** Voz s mŕtvolami: odkiaľ sa telo začne mykať a kedy sa posadí (px od hráča). */
+export const CART_TWITCH = 96;
+export const CART_RISE = 34;
+/** Ako dlho sa nakazený z voza zbiera, než zaútočí (s). */
+const CART_GETUP = 1.1;
 const RESPAWN_DELAY = 1.1;
 
 export type GameEvent =
@@ -244,6 +249,8 @@ export type GameEvent =
   | { type: 'doorOpen'; x: number; y: number }
   | { type: 'saved'; x: number; y: number }
   | { type: 'turned'; x: number; y: number }
+  | { type: 'cartTwitch'; x: number; y: number }
+  | { type: 'cartRise'; x: number; y: number; survivor: boolean }
   | { type: 'shield'; on: boolean }
   | { type: 'fogBurn'; x: number; y: number }
   | { type: 'gust'; dir: number }
@@ -378,6 +385,14 @@ export interface Survivor extends Point {
   timer: number;
 }
 
+/** Voz s mŕtvolami; y sú kolesá na zemi. */
+export interface Cart extends Point {
+  state: 'still' | 'twitch' | 'risen';
+  survivor: boolean;
+  /** Čas od posledného myknutia / posadenia (pre animáciu). */
+  timer: number;
+}
+
 export interface Nest extends Point {
   state: 'intact' | 'burning' | 'ash';
   timer: number;
@@ -427,6 +442,7 @@ export class Game {
   readonly herbs: Pickup[];
   readonly nests: Nest[];
   readonly survivors: Survivor[];
+  readonly carts: Cart[];
   readonly keys: Pickup[];
   readonly coins: Pickup[];
   /** Kľúče v brašni a otvorené dvere (index políčka). */
@@ -595,6 +611,13 @@ export class Game {
       state: 'waiting',
       timer: 0,
     }));
+    this.carts = level.carts.map((c) => ({
+      x: c.x,
+      y: c.y + TILE / 2,
+      state: 'still',
+      survivor: c.survivor,
+      timer: 0,
+    }));
     this.fog = new Float32Array(level.width * level.height);
     for (const f of level.fog) this.fog[f.row * level.width + f.col] = 1;
     this.fogHome = this.fog.slice();
@@ -716,6 +739,7 @@ export class Game {
     this.swingCane(dt, input);
     this.useHerb(input);
     for (const s of this.survivors) if (s.state === 'saved') s.timer += dt;
+    this.updateCarts(dt);
     if (this.state === 'play') this.updateShades(dt);
     if (this.state === 'play') this.updateRats(dt);
     if (this.state === 'play') this.updateGhouls(dt);
@@ -774,6 +798,52 @@ export class Game {
       this.infection = 0;
       this.herbsCarried--;
       this.events.push({ type: 'cure' });
+    }
+  }
+
+  /**
+   * Voz s mŕtvolami: keď sa hráč priblíži, jedno telo sa začne mykať (varovanie) a zblízka
+   * sa posadí. Buď je to preživší, ktorý prosí o bylinu, alebo nakazený, ktorý sa chvíľu
+   * zbiera a potom zaútočí.
+   */
+  private updateCarts(dt: number): void {
+    if (this.state !== 'play') return;
+    const c = this.center;
+    const feet = this.player.y + PLAYER_H;
+    for (const cart of this.carts) {
+      cart.timer += dt;
+      if (cart.state === 'risen' || Math.abs(cart.y - feet) > 28) continue;
+      const d = Math.abs(cart.x - c.x);
+      if (cart.state === 'still' && d < CART_TWITCH) {
+        cart.state = 'twitch';
+        cart.timer = 0;
+        this.events.push({ type: 'cartTwitch', x: cart.x, y: cart.y - 10 });
+      }
+      if (cart.state !== 'twitch' || d >= CART_RISE) continue;
+      cart.state = 'risen';
+      cart.timer = 0;
+      this.events.push({ type: 'cartRise', x: cart.x, y: cart.y - 12, survivor: cart.survivor });
+      // Telo zlezie z voza na stranu, odkiaľ prichádza lekár.
+      const x = cart.x + (c.x < cart.x ? -10 : 10);
+      if (cart.survivor) {
+        this.survivors.push({ x, y: cart.y, state: 'waiting', timer: 0 });
+        continue;
+      }
+      this.ghouls.push({
+        x,
+        y: cart.y,
+        home: { x, y: cart.y },
+        dir: c.x < x ? -1 : 1,
+        vx: 0,
+        alive: true,
+        chasing: true,
+        hp: 1,
+        burning: false,
+        step: 0,
+        lure: c.x,
+        lureTime: 2,
+        knock: CART_GETUP,
+      });
     }
   }
 

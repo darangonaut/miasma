@@ -18,6 +18,7 @@
  *   u  preživší (prosí o bylinu; bez nej sa pri zvone premení)
  *   k  kľúč                 D  zamknuté dvere (otvorí ich kľúč)
  *   $  groš (na lekáreň)
+ *   C  voz s mŕtvolami (jedna sa posadí: nakazený, alebo preživší)
  *   H  visiaca plošina ↔    V  visiaca plošina ↕ (2 políčka široká, 4 políčka dráha)
  *   1–9  odkaz na stene s radou
  */
@@ -57,6 +58,11 @@ export interface Sign extends Point {
   hint: string;
 }
 
+/** Voz s mŕtvolami; `survivor` = posadí sa živý človek (inak nakazený). */
+export interface Cart extends Point {
+  survivor: boolean;
+}
+
 export interface LevelDef {
   id: string;
   /** Kľúč názvu v i18n. */
@@ -87,6 +93,7 @@ export interface Level {
   survivors: Point[];
   keys: Point[];
   coins: Point[];
+  carts: Cart[];
   /** Políčka s miazmou (stĺpec, riadok). */
   fog: { col: number; row: number }[];
   icicles: Point[];
@@ -137,6 +144,7 @@ export function parseLevel(def: LevelDef): Level {
     survivors: [],
     keys: [],
     coins: [],
+    carts: [],
     fog: [],
     icicles: [],
     movers: [],
@@ -168,6 +176,8 @@ export function parseLevel(def: LevelDef): Level {
       else if (ch === 'u') level.survivors.push(c);
       else if (ch === 'k') level.keys.push(c);
       else if (ch === '$') level.coins.push(c);
+      else if (ch === 'C')
+        level.carts.push({ ...c, survivor: cartHoldsSurvivor(def.id, level.carts.length) });
       else if (ch === '~') level.fog.push({ col: x, row: y });
       else if (ch === 'S') level.bigShades.push(c);
       else if (ch === 'v') level.icicles.push(c);
@@ -192,4 +202,20 @@ export function tileAt(level: Level, col: number, row: number): Tile {
   if (col < 0 || col >= level.width) return Tile.Ground; // okraje sveta sú stena
   if (row < 0 || row >= level.height) return Tile.Empty; // hore aj dole voľno (dole sa padá)
   return level.tiles[row * level.width + col]!;
+}
+
+/**
+ * Kto sa na voze posadí, je pevne dané levelom (hráč to nevie dopredu, ale počet
+ * zachrániteľných preživších sa nemení): zhruba polovica vozov skrýva živého človeka.
+ */
+export function cartHoldsSurvivor(id: string, index: number): boolean {
+  let h = 2166136261;
+  for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 16777619);
+  h = Math.imul(h ^ (index + 7), 2246822519);
+  return ((h >>> 13) & 1) === 1;
+}
+
+/** Všetci preživší levelu vrátane tých, čo sa posadia na voze. */
+export function survivorTotal(level: Level): number {
+  return level.survivors.length + level.carts.filter((c) => c.survivor).length;
 }

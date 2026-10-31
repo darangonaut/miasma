@@ -16,7 +16,7 @@ import {
   OIL_MAX,
   type GameEvent,
 } from './game/game';
-import { parseLevel } from './game/level';
+import { parseLevel, survivorTotal } from './game/level';
 import { ending, secretUnlocked } from './game/story';
 import { LEVELS } from './game/levels';
 import {
@@ -421,7 +421,7 @@ function showVictory(): void {
     const level = parseLevel(def);
     ft += level.fireflies.length;
     ct += level.crystals.length;
-    st += level.survivors.length;
+    st += survivorTotal(level);
     f += save.best[def.id]?.fireflies ?? 0;
     c += save.best[def.id]?.crystals ?? 0;
     s += save.best[def.id]?.survivors ?? 0;
@@ -470,6 +470,8 @@ function onEvents(events: GameEvent[]): void {
       showToast(t('savedToast'));
     } else if (e.type === 'turned') {
       showToast(t('turnedToast'));
+    } else if (e.type === 'cartRise') {
+      showToast(t(e.survivor ? 'cartSurvivor' : 'cartGhoul'));
     } else if (e.type === 'gateLocked') {
       showToast(t('gateLocked', { n: e.left }));
     } else if (e.type === 'nestBurnt') {

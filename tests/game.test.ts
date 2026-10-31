@@ -658,6 +658,51 @@ describe('nové svety', () => {
     expect(cold.survivors[0]!.state).toBe('turned');
   });
 
+  it('voz s mŕtvolami: telo sa najprv myká, zblízka sa posadí preživší alebo nakazený', () => {
+    const rows = [' P h          C          E', '##########################'];
+    const until = (g: Game, type: string) => {
+      const ev: ReturnType<Game['step']> = [];
+      for (let t = 0; t < 6 && !ev.some((e) => e.type === type); t += DT)
+        ev.push(...g.step(DT, { ...NO_INPUT, right: true }));
+      return ev;
+    };
+    const alive = make(rows);
+    alive.carts[0]!.survivor = true;
+    const twitch = until(alive, 'cartTwitch');
+    expect(alive.carts[0]!.state).toBe('twitch');
+    expect(twitch.some((e) => e.type === 'cartRise')).toBe(false);
+    const rise = until(alive, 'cartRise');
+    expect(rise.find((e) => e.type === 'cartRise')).toMatchObject({ survivor: true });
+    expect(alive.survivors).toHaveLength(1);
+    run(alive, 0.3, { right: true });
+    expect(alive.nearSurvivor).not.toBeNull();
+    const saved = [...alive.step(DT, { ...NO_INPUT, herb: true })];
+    expect(saved.some((e) => e.type === 'saved')).toBe(true);
+
+    const dead = make(rows);
+    dead.carts[0]!.survivor = false;
+    const ghouls = dead.ghouls.length;
+    until(dead, 'cartRise');
+    expect(dead.ghouls).toHaveLength(ghouls + 1);
+    // Nakazený sa chvíľu zbiera: hráč, ktorý zastane, má čas zareagovať.
+    run(dead, 0.8);
+    expect(dead.state).toBe('play');
+    expect(dead.survivors).toHaveLength(0);
+  });
+
+  it('preživší z vozov sa rátajú do celkového počtu (koniec hry)', async () => {
+    const { survivorTotal } = await import('@/game/level');
+    let carts = 0;
+    for (const def of LEVELS) {
+      const level = parseLevel(def);
+      carts += level.carts.length;
+      expect(survivorTotal(level)).toBe(
+        level.survivors.length + level.carts.filter((c) => c.survivor).length,
+      );
+    }
+    expect(carts).toBeGreaterThanOrEqual(8);
+  });
+
   it('výbava z lekárne: ampulka, maska a okutá palica', () => {
     const rows = [' P                  E', '#####################'];
     const perks = { flask: 2, mask: 2, cane: 1 };

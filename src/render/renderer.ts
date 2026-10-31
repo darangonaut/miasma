@@ -124,6 +124,9 @@ export class Renderer {
   private barricadeSprites: { sprite: Sprite; fire: Sprite }[] = [];
   private herbSprites: Sprite[] = [];
   private survivorSprites: Sprite[] = [];
+  private survivorTex = Texture.EMPTY;
+  private cartSprites: Sprite[] = [];
+  private cartTex: Texture[] = [];
   private doorSprites: { sprite: Sprite; index: number }[] = [];
   private keySprites: Sprite[] = [];
   private coinSprites: Sprite[] = [];
@@ -405,12 +408,14 @@ export class Renderer {
       this.actors.addChild(s);
       return s;
     });
-    const survivorTex = art.survivor();
-    this.survivorSprites = game.survivors.map((s) => {
-      const sprite = new Sprite(survivorTex);
-      sprite.anchor.set(0.5, 14 / 15);
-      sprite.position.set(s.x, s.y + 0.5);
-      this.actors.addChild(sprite);
+    this.survivorTex = art.survivor();
+    this.survivorSprites = [];
+    if (!this.cartTex.length) this.cartTex = [art.cart(false), art.cart(true)];
+    this.cartSprites = game.carts.map((c) => {
+      const sprite = new Sprite(this.cartTex[0]);
+      sprite.anchor.set(0.5, 1);
+      sprite.position.set(c.x, c.y + 1);
+      this.level.addChild(sprite);
       return sprite;
     });
     this.herbSprites = game.herbs.map((hb) => {
@@ -619,6 +624,13 @@ export class Renderer {
           break;
         case 'saved':
           this.burst(e.x, e.y, 20, 0xfff0d0, 50, true);
+          break;
+        case 'cartTwitch':
+          this.burst(e.x, e.y, 4, C.shadeInner, 20, false);
+          break;
+        case 'cartRise':
+          this.shake = 3;
+          this.burst(e.x, e.y, 14, e.survivor ? 0xfff0d0 : C.plague, 40, !e.survivor);
           break;
         case 'turned':
           this.shake = 2;
@@ -962,6 +974,22 @@ export class Renderer {
       const s = this.coinSprites[i]!;
       s.visible = !c.taken;
       s.scale.x = Math.cos(t * 3 + i);
+    });
+    // Preživší z vozov pribúdajú počas hry.
+    while (this.survivorSprites.length < game.survivors.length) {
+      const sprite = new Sprite(this.survivorTex);
+      sprite.anchor.set(0.5, 14 / 15);
+      const s = game.survivors[this.survivorSprites.length]!;
+      sprite.position.set(s.x, s.y + 0.5);
+      this.actors.addChild(sprite);
+      this.survivorSprites.push(sprite);
+    }
+    game.carts.forEach((c, i) => {
+      const sprite = this.cartSprites[i]!;
+      sprite.texture = this.cartTex[c.state === 'risen' ? 1 : 0]!;
+      // Myká sa: krátke trhnutia, čím bližšie lekár, tým častejšie.
+      const jerk = c.state === 'twitch' && Math.sin(t * 7 + i) > 0.6 ? Math.sin(t * 60) * 0.6 : 0;
+      sprite.x = c.x + jerk;
     });
     game.survivors.forEach((s, i) => {
       const sprite = this.survivorSprites[i]!;
