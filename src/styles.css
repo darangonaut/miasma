@@ -387,6 +387,32 @@ button.big:hover {
   opacity: 1;
 }
 
+/* Hlas z denníka: šepot hore, pomaly sa objaví a rozplynie. */
+#whisper {
+  position: fixed;
+  top: 17%;
+  left: 0;
+  right: 0;
+  font-family: var(--font);
+  font-size: 22px;
+  font-style: italic;
+  letter-spacing: 0.06em;
+  color: rgb(232 222 196 / 85%);
+  text-align: center;
+  text-shadow: 0 0 10px rgb(0 0 0 / 95%);
+  pointer-events: none;
+  opacity: 0;
+  filter: blur(1.5px);
+  transition:
+    opacity 1.4s,
+    filter 1.4s;
+}
+
+#whisper.show {
+  opacity: 1;
+  filter: blur(0);
+}
+
 #hurt {
   position: fixed;
   inset: 0;
@@ -752,6 +778,14 @@ button.big:hover {
   font-size: 14px;
   color: #6a5a44;
   text-align: right;
+}
+
+.victory-hooded {
+  max-width: 580px;
+  font-size: 18px;
+  font-style: italic;
+  color: var(--paper);
+  opacity: 0.85;
 }
 
 .victory-secret {

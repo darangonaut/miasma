@@ -38,6 +38,7 @@ export interface Art {
   survivor(): Texture;
   cart(risen: boolean): Texture;
   grate(open: boolean): Texture;
+  hooded(): Texture;
   nest(ash: boolean): Texture;
   cane(): Texture;
   spark(): Texture;

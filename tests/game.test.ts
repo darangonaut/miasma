@@ -771,6 +771,42 @@ describe('nové svety', () => {
     expect(safe.tides[0]!.state).toBe('gone');
   });
 
+  it('hlas z denníka: raz za level zašepká, postava v kapucni stojí za chrbtom a zmizne', async () => {
+    const { HOODED_TIME } = await import('@/game/game');
+    const rows = [
+      ' P                                        E',
+      '###########################################',
+    ];
+    const game = make(rows);
+    const span = game.level.exit.x - game.level.start.x;
+    expect(game.whisperX).toBeGreaterThan(game.level.start.x + span * 0.3);
+    expect(game.whisperX).toBeLessThan(game.level.start.x + span * 0.7);
+    const ev: ReturnType<Game['step']> = [];
+    for (let t = 0; t < 8 && !game.hooded; t += DT)
+      ev.push(...game.step(DT, { ...NO_INPUT, right: true }));
+    expect(ev.filter((e) => e.type === 'whisper')).toHaveLength(1);
+    // Stojí za lekárom (beží doprava), na kraji svetla.
+    expect(game.hooded!.x).toBeLessThan(game.center.x - 20);
+    run(game, HOODED_TIME * 0.5);
+    expect(game.hooded).not.toBeNull();
+    // Keď sa otočí, postava zmizne.
+    run(game, 0.4, { left: true });
+    expect(game.hooded).toBeNull();
+    expect(run(game, 5, { right: true }).some((e) => e.type === 'whisper')).toBe(false);
+  });
+
+  it('hlas z denníka čaká, kým nakazení lekára neprenasledujú', () => {
+    const game = make([
+      ' P                       g                E',
+      '############################################',
+    ]);
+    game.whisperX = 0;
+    game.ghouls[0]!.x = game.center.x + 30;
+    game.ghouls[0]!.chasing = true;
+    const ev = run(game, 0.05);
+    expect(ev.some((e) => e.type === 'whisper')).toBe(false);
+  });
+
   it('výbava z lekárne: ampulka, maska a okutá palica', () => {
     const rows = [' P                  E', '#####################'];
     const perks = { flask: 2, mask: 2, cane: 1 };

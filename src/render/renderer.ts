@@ -12,6 +12,7 @@ import {
   CANE_TIME,
   FLARE_RADIUS,
   GHOUL_H,
+  HOODED_TIME,
   LANTERN_RADIUS,
   SPARK_RADIUS,
   PLAYER_H,
@@ -134,6 +135,8 @@ export class Renderer {
   /** Oči potkanov v prílive: svietia aj v tme nad ním. */
   private tideEyes: Sprite[] = [];
   private eyeTex = Texture.EMPTY;
+  /** Postava v kapucni (hlas z denníka). */
+  private hoodedSprite: Sprite | null = null;
   private doorSprites: { sprite: Sprite; index: number }[] = [];
   private keySprites: Sprite[] = [];
   private coinSprites: Sprite[] = [];
@@ -427,6 +430,10 @@ export class Renderer {
       return sprite;
     });
     this.tidePool = [];
+    this.hoodedSprite = new Sprite(art.hooded());
+    this.hoodedSprite.anchor.set(0.5, 1);
+    this.hoodedSprite.visible = false;
+    this.above.addChild(this.hoodedSprite);
     this.tideEyes = [];
     if (this.eyeTex === Texture.EMPTY) this.eyeTex = art.dot('#ff5a3a', 1.4);
     this.cartSprites = game.carts.map((c) => {
@@ -1065,6 +1072,17 @@ export class Renderer {
     });
     for (let i = rats; i < this.tidePool.length; i++) this.tidePool[i]!.visible = false;
     for (let i = eyes; i < this.tideEyes.length; i++) this.tideEyes[i]!.visible = false;
+    // Postava v kapucni: vynorí sa z tmy, hľadí na lekára, rozplynie sa.
+    const h = game.hooded;
+    const hs = this.hoodedSprite!;
+    hs.visible = h !== null;
+    if (h) {
+      hs.position.set(h.x, h.y + 0.5);
+      hs.scale.x = game.center.x < h.x ? -1 : 1;
+      const fadeIn = Math.min(1, h.timer / 0.6);
+      const fadeOut = Math.min(1, (HOODED_TIME - h.timer) / 0.5);
+      hs.alpha = Math.max(0, Math.min(fadeIn, fadeOut)) * 0.9;
+    }
     game.carts.forEach((c, i) => {
       const sprite = this.cartSprites[i]!;
       sprite.texture = this.cartTex[c.state === 'risen' ? 1 : 0]!;

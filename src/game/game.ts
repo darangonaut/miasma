@@ -229,6 +229,9 @@ export const TIDE_TRIGGER = 48;
 const TIDE_RUMBLE = 70;
 /** Ako dlho príliv opadá (s). */
 export const TIDE_DRAIN = 1.5;
+/** Postava v kapucni za chrbtom: ako dlho stojí a za akú chvíľu zmizne, keď sa otočíš. */
+export const HOODED_TIME = 2.6;
+const HOODED_SHY = 0.35;
 /** Ako dlho sa nakazený z voza zbiera, než zaútočí (s). */
 const CART_GETUP = 1.1;
 const RESPAWN_DELAY = 1.1;
@@ -280,6 +283,7 @@ export type GameEvent =
   | { type: 'bellWarn' }
   | { type: 'bell' }
   | { type: 'strayBell' }
+  | { type: 'whisper'; x: number; y: number }
   | { type: 'lightning' }
   | { type: 'died'; cause: DeathCause }
   | { type: 'respawn' }
@@ -533,6 +537,12 @@ export class Game {
   strayAt: number;
   still = 0;
   private strayFrom: Point = { x: 0, y: 0 };
+  /**
+   * Hlas z denníka: raz za level (od tohto x ďalej) zašepká a za chrbtom lekára sa na kraji
+   * svetla mihne postava v kapucni. Keď sa k nej otočí, zmizne.
+   */
+  whisperX: number;
+  hooded: { x: number; y: number; timer: number } | null = null;
   private events: GameEvent[] = [];
 
   /** Smola horí pomalšie s väčšou ampulkou, miazma nakazí pomalšie s lepšou maskou. */
@@ -549,6 +559,8 @@ export class Game {
     this.herbsCarried = herbs;
     this.rng = new Rng(hash(level.id));
     this.skyRng = new Rng(hash(level.id) ^ 0x5bd1e995);
+    const span = level.exit.x - level.start.x;
+    this.whisperX = level.start.x + span * (0.35 + (hash(level.id + 'w') % 30) / 100);
     // Medzi prvým a druhým riadnym úderom, inde v každom leveli.
     this.strayAt = BELL_FIRST + BELL_PERIOD * 0.4 + (hash(level.id) % 11);
     this.checkpoint = { ...level.start };
@@ -786,6 +798,7 @@ export class Game {
     this.updateCarts(dt);
     this.updateTides(dt);
     this.updateStray(dt);
+    this.updateWhisper(dt);
     // Počas strnutia po zvone mimo poradia sa nehýbe nič okrem lekára.
     const frozen = this.still > 0;
     if (this.state === 'play' && !frozen) this.updateShades(dt);
@@ -1015,6 +1028,30 @@ export class Game {
     this.still = STRAY_STILL;
     this.strayFrom = this.center;
     this.events.push({ type: 'strayBell' });
+  }
+
+  /**
+   * Hlas z denníka: keď lekár prejde polovicu cesty a práve mu nič nehrozí, niekto mu
+   * zašepká do ucha. Postava v kapucni stojí za ním na kraji svetla; keď sa otočí, je preč.
+   */
+  private updateWhisper(dt: number): void {
+    const h = this.hooded;
+    if (h) {
+      h.timer += dt;
+      const p = this.player;
+      const facingIt = Math.sign(h.x - this.center.x) === p.facing;
+      if (facingIt && h.timer > HOODED_SHY) h.timer = Math.max(h.timer, HOODED_TIME - 0.25);
+      if (h.timer >= HOODED_TIME) this.hooded = null;
+      return;
+    }
+    const p = this.player;
+    if (this.state !== 'play' || this.center.x < this.whisperX || !p.onGround) return;
+    if (this.frenzy > 0 || this.still > 0 || this.ghouls.some((g) => g.alive && g.chasing)) return;
+    this.whisperX = Infinity;
+    const x = this.center.x - p.facing * (this.radius * 0.8 + 6);
+    const feet = this.floorBelow({ x, y: p.y }) ?? p.y + PLAYER_H;
+    this.hooded = { x, y: Math.min(feet, p.y + PLAYER_H + TILE), timer: 0 };
+    this.events.push({ type: 'whisper', x, y: this.hooded.y });
   }
 
   /** Je hráč v závetrí? Stačí skala do dvoch políčok na strane, odkiaľ fúka. */
@@ -1980,6 +2017,7 @@ export class Game {
     this.infection = 0;
     this.frenzy = 0;
     this.still = 0;
+    this.hooded = null;
     // Po smrti dostane hráč pokoj: zvon udrie až po celej perióde.
     this.nextBell = Math.max(this.nextBell, this.time + BELL_PERIOD * 0.6);
     this.fog.set(this.fogHome);

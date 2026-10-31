@@ -213,6 +213,9 @@ export class Sound {
             this.tone(this.note(n), 'sine', 0.06, 1.6, this.echo ?? this.master!, i * 0.12),
           );
           break;
+        case 'whisper':
+          this.whisper();
+          break;
         case 'grateRumble':
           // Pod mrežou to duní a pišťí.
           this.noise(1.2, 120, 0.12);
@@ -362,6 +365,42 @@ export class Sound {
           break;
       }
     }
+  }
+
+  /**
+   * Šepot: šum cez dva pásmové filtre, ktoré sa presúvajú ako formanty samohlások,
+   * a hlasitosť po slabikách; doznieva v ozvene.
+   */
+  private whisper(): void {
+    const ctx = this.ctx!;
+    const t = ctx.currentTime;
+    const length = 2.4;
+    const src = ctx.createBufferSource();
+    src.buffer = this.noiseBuffer(length);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, t);
+    // Slabiky: krátke nádychy hlasitosti.
+    for (let i = 0; i < 9; i++) {
+      const at = t + 0.15 + i * 0.22 + (i % 3) * 0.03;
+      g.gain.linearRampToValueAtTime(0.07, at + 0.05);
+      g.gain.linearRampToValueAtTime(0.012, at + 0.18);
+    }
+    g.gain.linearRampToValueAtTime(0, t + length);
+    for (const [from, to, q] of [
+      [700, 1100, 6],
+      [2300, 1700, 8],
+    ] as const) {
+      const f = ctx.createBiquadFilter();
+      f.type = 'bandpass';
+      f.Q.value = q;
+      f.frequency.setValueAtTime(from, t);
+      for (let i = 1; i <= 6; i++)
+        f.frequency.linearRampToValueAtTime(i % 2 ? to : from, t + (i * length) / 6);
+      src.connect(f).connect(g);
+    }
+    g.connect(this.echo ?? this.master!);
+    g.connect(this.master!);
+    src.start(t);
   }
 
   /** Hlboké chrčanie: píla s kolísajúcou výškou cez tlmiaci filter. */

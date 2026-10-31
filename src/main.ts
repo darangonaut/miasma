@@ -44,6 +44,7 @@ const victory = $('#victory');
 const hint = $('#hint');
 const banner = $('#banner');
 const toast = $('#toast');
+const whisper = $('#whisper');
 const hurt = $('#hurt');
 const dread = $('#dread');
 const sick = $('#sick');
@@ -444,6 +445,7 @@ function showVictory(): void {
   } as const;
   $('.victory-title').textContent = t(ENDINGS[end][0]);
   $('.victory-story').textContent = t(ENDINGS[end][1]);
+  $('.victory-hooded').textContent = t('endHooded');
   const secret = $('.victory-secret');
   secret.hidden = !secretUnlocked(c, ct);
   secret.textContent = t('endSecret');
@@ -476,6 +478,11 @@ function onEvents(events: GameEvent[]): void {
       showToast(t('gateLocked', { n: e.left }));
     } else if (e.type === 'nestBurnt') {
       if (game && game.nestsBurnt === game.nests.length) showToast(t('nestsDone'));
+    } else if (e.type === 'whisper') {
+      // Každé dva levely nová veta lekára, ktorý tu bol pred tebou.
+      whisper.textContent = t(`whisper${Math.floor(levelIndex / 2) + 1}` as Key);
+      whisper.classList.add('show');
+      window.setTimeout(() => whisper.classList.remove('show'), 3200);
     } else if (e.type === 'tideBurst') {
       showToast(t('tideBurst'));
     } else if (e.type === 'strayBell') {

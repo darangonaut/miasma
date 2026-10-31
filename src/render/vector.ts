@@ -711,6 +711,35 @@ function cart(risen: boolean): Texture {
   });
 }
 
+/**
+ * Postava v kapucni: vysoký plášť, pod kapucňou zobák morovej masky (hľadí doprava).
+ * Okraje svetlé ako mesačný svit, aby sa mihla aj na kraji tmy. Chodidlá na y = 24.
+ */
+function hooded(): Texture {
+  return paint(14, 25, (ctx) => {
+    ctx.fillStyle = INK_CSS;
+    ctx.beginPath();
+    ctx.moveTo(2, 24);
+    ctx.quadraticCurveTo(2.6, 14, 4.6, 8);
+    ctx.quadraticCurveTo(4.4, 2.2, 7.6, 1.2);
+    ctx.quadraticCurveTo(10.6, 1.4, 10.4, 6.4);
+    ctx.lineTo(13.4, 8.6);
+    ctx.lineTo(10.2, 8.4);
+    ctx.quadraticCurveTo(11, 15, 12.4, 24);
+    ctx.closePath();
+    ctx.fill();
+    // Obrys v mesačnom svetle a zobák.
+    ctx.strokeStyle = 'rgba(214,206,186,0.55)';
+    ctx.lineWidth = 0.4;
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(230,222,200,0.8)';
+    line(ctx, 10.4, 6.6, 13.2, 8.6, 0.45);
+    // Sklíčko masky.
+    ctx.fillStyle = 'rgba(230,222,200,0.6)';
+    circle(ctx, 8.6, 5, 0.6);
+  });
+}
+
 /** Kanálová mreža v dlažbe; pretrhnutá je vyvalená a ohnutá. Horná hrana na y = 1. */
 function grate(open: boolean): Texture {
   return paint(16, 6, (ctx) => {
@@ -1544,6 +1573,7 @@ export const vectorArt: Art = {
   survivor,
   cart,
   grate,
+  hooded,
   nest,
   cane,
   spark,
