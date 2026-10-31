@@ -37,6 +37,7 @@ export interface Art {
   coin(): Texture;
   survivor(): Texture;
   cart(risen: boolean): Texture;
+  grate(open: boolean): Texture;
   nest(ash: boolean): Texture;
   cane(): Texture;
   spark(): Texture;

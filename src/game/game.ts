@@ -216,6 +216,19 @@ export const RAT_DARE = 16;
 /** Voz s mŕtvolami: odkiaľ sa telo začne mykať a kedy sa posadí (px od hráča). */
 export const CART_TWITCH = 96;
 export const CART_RISE = 34;
+/**
+ * Krysí príliv: kanálová mreža sa pretrhne, keď ju lekár prejde, a ulicou sa za ním valí
+ * záplava potkanov — rýchlejšie, než beží. Zachráni ho len vyvýšené miesto.
+ */
+export const TIDE_SPEED = 120;
+/** Do akej výšky nad ulicou príliv siaha (px) a ako ďaleko od mreže sa vyleje. */
+export const TIDE_HEIGHT = 12;
+export const TIDE_REACH = 20 * 16;
+/** Ako ďaleko za mrežou musí lekár byť, kým sa pretrhne, a odkiaľ ju počuť. */
+export const TIDE_TRIGGER = 48;
+const TIDE_RUMBLE = 70;
+/** Ako dlho príliv opadá (s). */
+export const TIDE_DRAIN = 1.5;
 /** Ako dlho sa nakazený z voza zbiera, než zaútočí (s). */
 const CART_GETUP = 1.1;
 const RESPAWN_DELAY = 1.1;
@@ -254,6 +267,9 @@ export type GameEvent =
   | { type: 'saved'; x: number; y: number }
   | { type: 'turned'; x: number; y: number }
   | { type: 'cartTwitch'; x: number; y: number }
+  | { type: 'grateRumble'; x: number; y: number }
+  | { type: 'tideBurst'; x: number; y: number }
+  | { type: 'tideDrain'; x: number; y: number }
   | { type: 'cartRise'; x: number; y: number; survivor: boolean }
   | { type: 'shield'; on: boolean }
   | { type: 'fogBurn'; x: number; y: number }
@@ -398,6 +414,15 @@ export interface Cart extends Point {
   timer: number;
 }
 
+/** Krysí príliv z kanálovej mreže; y je úroveň ulice (chodidlá). */
+export interface Tide extends Point {
+  state: 'sealed' | 'rumble' | 'flood' | 'drain' | 'gone';
+  /** Kam už príliv došiel (x). */
+  front: number;
+  /** Čas v aktuálnom stave. */
+  timer: number;
+}
+
 export interface Nest extends Point {
   state: 'intact' | 'burning' | 'ash';
   timer: number;
@@ -448,6 +473,7 @@ export class Game {
   readonly nests: Nest[];
   readonly survivors: Survivor[];
   readonly carts: Cart[];
+  readonly tides: Tide[];
   readonly keys: Pickup[];
   readonly coins: Pickup[];
   /** Kľúče v brašni a otvorené dvere (index políčka). */
@@ -629,6 +655,13 @@ export class Game {
       survivor: c.survivor,
       timer: 0,
     }));
+    this.tides = level.grates.map((g) => ({
+      x: g.x,
+      y: g.y + TILE / 2,
+      state: 'sealed',
+      front: g.x,
+      timer: 0,
+    }));
     this.fog = new Float32Array(level.width * level.height);
     for (const f of level.fog) this.fog[f.row * level.width + f.col] = 1;
     this.fogHome = this.fog.slice();
@@ -751,6 +784,7 @@ export class Game {
     this.useHerb(input);
     for (const s of this.survivors) if (s.state === 'saved') s.timer += dt;
     this.updateCarts(dt);
+    this.updateTides(dt);
     this.updateStray(dt);
     // Počas strnutia po zvone mimo poradia sa nehýbe nič okrem lekára.
     const frozen = this.still > 0;
@@ -858,6 +892,57 @@ export class Game {
         lureTime: 2,
         knock: CART_GETUP,
       });
+    }
+  }
+
+  /** Výška prílivu nad ulicou (px): pri opadaní klesá k nule. */
+  tideLevel(t: Tide): number {
+    if (t.state === 'flood') return TIDE_HEIGHT;
+    if (t.state === 'drain') return TIDE_HEIGHT * Math.max(0, 1 - t.timer / TIDE_DRAIN);
+    return 0;
+  }
+
+  /**
+   * Krysí príliv: keď sa lekár priblíži, mreža duní (varovanie); keď ju prejde, pretrhne sa
+   * a záplava potkanov sa valí ulicou za ním. Svetlo ju nezastaví — zachráni len vyvýšené
+   * miesto (debna, strecha). Po smrti sa mreža znova zavrie.
+   */
+  private updateTides(dt: number): void {
+    if (this.state !== 'play') return;
+    const c = this.center;
+    const feet = this.player.y + PLAYER_H;
+    for (const t of this.tides) {
+      t.timer += dt;
+      if (t.state === 'sealed' || t.state === 'rumble') {
+        if (t.state === 'sealed' && Math.abs(c.x - t.x) < TIDE_RUMBLE && feet < t.y + 8) {
+          t.state = 'rumble';
+          this.events.push({ type: 'grateRumble', x: t.x, y: t.y });
+        }
+        if (c.x - t.x > TIDE_TRIGGER && feet < t.y + 8 && feet > t.y - 3 * TILE) {
+          t.state = 'flood';
+          t.timer = 0;
+          t.front = t.x;
+          this.events.push({ type: 'tideBurst', x: t.x, y: t.y - 4 });
+        }
+        continue;
+      }
+      if (t.state === 'flood') {
+        t.front = Math.min(t.x + TIDE_REACH, t.front + TIDE_SPEED * dt);
+        if (t.front >= t.x + TIDE_REACH) {
+          t.state = 'drain';
+          t.timer = 0;
+          this.events.push({ type: 'tideDrain', x: t.front, y: t.y });
+        }
+      } else if (t.state === 'drain' && t.timer >= TIDE_DRAIN) {
+        t.state = 'gone';
+        continue;
+      }
+      const top = t.y - this.tideLevel(t);
+      if (top >= t.y) continue;
+      // Nakazení na ulici zmiznú pod záplavou.
+      for (const g of this.ghouls)
+        if (g.alive && g.x > t.x - 8 && g.x < t.front && Math.abs(g.y - t.y) < 4) this.killGhoul(g);
+      if (c.x > t.x - 8 && c.x < t.front && feet > top && feet < t.y + 4) this.die('rats');
     }
   }
 
@@ -1908,6 +1993,13 @@ export class Game {
       ic.state = 'hang';
     }
     this.noises = [];
+    // Príliv, ktorý lekára zastihol, sa vráti do kanála; mreža sa znova pretrhne.
+    for (const t of this.tides)
+      if (t.state !== 'gone') {
+        t.state = 'sealed';
+        t.front = t.x;
+        t.timer = 0;
+      }
     for (const r of this.rats) {
       r.x = r.home.x;
       r.vx = 0;

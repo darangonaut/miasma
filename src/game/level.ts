@@ -19,6 +19,7 @@
  *   k  kľúč                 D  zamknuté dvere (otvorí ich kľúč)
  *   $  groš (na lekáreň)
  *   C  voz s mŕtvolami (jedna sa posadí: nakazený, alebo preživší)
+ *   T  kanálová mreža (pretrhne sa a ulicou sa prevalí krysí príliv)
  *   H  visiaca plošina ↔    V  visiaca plošina ↕ (2 políčka široká, 4 políčka dráha)
  *   1–9  odkaz na stene s radou
  */
@@ -94,6 +95,7 @@ export interface Level {
   keys: Point[];
   coins: Point[];
   carts: Cart[];
+  grates: Point[];
   /** Políčka s miazmou (stĺpec, riadok). */
   fog: { col: number; row: number }[];
   icicles: Point[];
@@ -145,6 +147,7 @@ export function parseLevel(def: LevelDef): Level {
     keys: [],
     coins: [],
     carts: [],
+    grates: [],
     fog: [],
     icicles: [],
     movers: [],
@@ -176,6 +179,7 @@ export function parseLevel(def: LevelDef): Level {
       else if (ch === 'u') level.survivors.push(c);
       else if (ch === 'k') level.keys.push(c);
       else if (ch === '$') level.coins.push(c);
+      else if (ch === 'T') level.grates.push(c);
       else if (ch === 'C')
         level.carts.push({ ...c, survivor: cartHoldsSurvivor(def.id, level.carts.length) });
       else if (ch === '~') level.fog.push({ col: x, row: y });

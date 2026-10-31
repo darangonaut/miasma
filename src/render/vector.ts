@@ -711,6 +711,29 @@ function cart(risen: boolean): Texture {
   });
 }
 
+/** Kanálová mreža v dlažbe; pretrhnutá je vyvalená a ohnutá. Horná hrana na y = 1. */
+function grate(open: boolean): Texture {
+  return paint(16, 6, (ctx) => {
+    ctx.fillStyle = '#050403';
+    ctx.fillRect(2, 1, 12, 4);
+    ctx.strokeStyle = '#5a5248';
+    if (!open) {
+      ctx.lineWidth = 0.8;
+      ctx.strokeRect(2, 1, 12, 4);
+      for (const x of [5, 8, 11]) line(ctx, x, 1, x, 5, 0.7);
+      return;
+    }
+    // Vyvalená mreža opretá o okraj, mreže pokrivené.
+    ctx.save();
+    ctx.translate(13.5, 1);
+    ctx.rotate(-1.1);
+    ctx.lineWidth = 0.8;
+    ctx.strokeRect(0, -2, 10, 4);
+    for (const x of [3, 6, 8.5]) line(ctx, x, -2, x + 0.6, 2, 0.6);
+    ctx.restore();
+  });
+}
+
 /** Preživší: kľačiaca postava v plachte so zopnutými rukami; chodidlá na y = 14. */
 function survivor(): Texture {
   return paint(12, 15, (ctx) => {
@@ -1520,6 +1543,7 @@ export const vectorArt: Art = {
   coin,
   survivor,
   cart,
+  grate,
   nest,
   cane,
   spark,

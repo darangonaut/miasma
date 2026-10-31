@@ -127,6 +127,13 @@ export class Renderer {
   private survivorTex = Texture.EMPTY;
   private cartSprites: Sprite[] = [];
   private cartTex: Texture[] = [];
+  private grateSprites: Sprite[] = [];
+  private grateTex: Texture[] = [];
+  /** Potkany krysieho prílivu (zdieľané pre všetky mreže). */
+  private tidePool: Sprite[] = [];
+  /** Oči potkanov v prílive: svietia aj v tme nad ním. */
+  private tideEyes: Sprite[] = [];
+  private eyeTex = Texture.EMPTY;
   private doorSprites: { sprite: Sprite; index: number }[] = [];
   private keySprites: Sprite[] = [];
   private coinSprites: Sprite[] = [];
@@ -411,6 +418,17 @@ export class Renderer {
     this.survivorTex = art.survivor();
     this.survivorSprites = [];
     if (!this.cartTex.length) this.cartTex = [art.cart(false), art.cart(true)];
+    if (!this.grateTex.length) this.grateTex = [art.grate(false), art.grate(true)];
+    this.grateSprites = game.tides.map((tide) => {
+      const sprite = new Sprite(this.grateTex[0]);
+      sprite.anchor.set(0.5, 1 / 6);
+      sprite.position.set(tide.x, tide.y);
+      this.level.addChild(sprite);
+      return sprite;
+    });
+    this.tidePool = [];
+    this.tideEyes = [];
+    if (this.eyeTex === Texture.EMPTY) this.eyeTex = art.dot('#ff5a3a', 1.4);
     this.cartSprites = game.carts.map((c) => {
       const sprite = new Sprite(this.cartTex[0]);
       sprite.anchor.set(0.5, 1);
@@ -624,6 +642,13 @@ export class Renderer {
           break;
         case 'saved':
           this.burst(e.x, e.y, 20, 0xfff0d0, 50, true);
+          break;
+        case 'tideBurst':
+          this.shake = 6;
+          this.burst(e.x, e.y, 18, C.shadeInner, 70, false);
+          break;
+        case 'grateRumble':
+          this.shake = 1.5;
           break;
         case 'strayBell':
           this.shake = 4;
@@ -989,6 +1014,57 @@ export class Renderer {
       this.actors.addChild(sprite);
       this.survivorSprites.push(sprite);
     }
+    // Krysí príliv: hustá záplava potkanov od mreže po čelo prílivu, pri opadaní riedne.
+    let rats = 0;
+    let eyes = 0;
+    game.tides.forEach((tide, i) => {
+      const grate = this.grateSprites[i]!;
+      grate.texture = this.grateTex[tide.state === 'sealed' || tide.state === 'rumble' ? 0 : 1]!;
+      grate.x = tide.x + (tide.state === 'rumble' ? Math.sin(t * 50) * 0.5 : 0);
+      const level = game.tideLevel(tide);
+      if (level <= 0) return;
+      const fill = level / 12;
+      const row = Math.floor((tide.y - 1) / TILE);
+      for (let x = tide.x - 4; x < tide.front; x += 3.2) {
+        // Cez steny a debny sa príliv nekreslí (prúdi popri nich).
+        if (isGround(tileAt(game.level, Math.floor(x / TILE), row))) continue;
+        for (let k = 0; k < 3; k++) {
+          const seed = Math.sin(x * 12.9898 + k * 78.233) * 43758.5453;
+          const r = seed - Math.floor(seed);
+          if (k > 0 && r > fill) continue;
+          let s = this.tidePool[rats];
+          if (!s) {
+            s = new Sprite(this.tex.rat[0]);
+            s.anchor.set(0.5, 5 / 6);
+            this.actors.addChild(s);
+            this.tidePool.push(s);
+          }
+          rats++;
+          s.visible = true;
+          s.texture = this.tex.rat[Math.floor(t * 12 + r * 7) % 2]!;
+          // Čelo sa prevaľuje, potkany sa navrstvia na seba.
+          const front = Math.min(1, (tide.front - x) / 24);
+          s.position.set(x + Math.sin(t * 9 + r * 20) * 1.5, tide.y + 0.5 - k * 3.2 * front);
+          s.scale.x = r > 0.15 ? 1 : -1;
+          s.alpha = Math.min(1, fill * 1.5);
+          // Každý druhý potkan sa pozrie: červené bodky v tme prezradia, kam príliv siaha.
+          if (r > 0.5) continue;
+          let e = this.tideEyes[eyes];
+          if (!e) {
+            e = new Sprite(this.eyeTex);
+            e.anchor.set(0.5);
+            this.above.addChild(e);
+            this.tideEyes.push(e);
+          }
+          eyes++;
+          e.visible = Math.floor(t * 3 + r * 13) % 4 !== 0;
+          e.position.set(s.x + s.scale.x * 2.2, s.y - 2.6);
+          e.alpha = s.alpha;
+        }
+      }
+    });
+    for (let i = rats; i < this.tidePool.length; i++) this.tidePool[i]!.visible = false;
+    for (let i = eyes; i < this.tideEyes.length; i++) this.tideEyes[i]!.visible = false;
     game.carts.forEach((c, i) => {
       const sprite = this.cartSprites[i]!;
       sprite.texture = this.cartTex[c.state === 'risen' ? 1 : 0]!;

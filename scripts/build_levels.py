@@ -558,6 +558,18 @@ class Gen:
             for dx in (4, 5, 7):
                 s.put(x0 + dx, s.y - 1, '$')
             s.put(x0 + 6, s.y - 1, 'h')
+        elif kind == 'tide':
+            # Krysí príliv: za mrežou sa ulicou valí záplava potkanov (rýchlejšie, než lekár
+            # beží); hneď za ňou debna a vyvýšená strecha, kde sa dá prečkať, kým opadne.
+            s.y = max(s.y, 9)
+            x0 = s.x
+            s.flat(24, ember=False, rock=False)
+            s.put(x0 + 1, s.y - 1, 'T')
+            s.lv.ground(x0 + 5, x0 + 5, top=s.y - 1)
+            s.lv.ground(x0 + 7, x0 + 15, top=s.y - 3)
+            s.put(x0 + 12, s.y - 4, 'f')
+            # Kaplnka na streche: tu sa príliv prečká a odtiaľto sa po smrti začína.
+            s.put(x0 + 9, s.y - 4, 'L')
         elif kind == 'movers':
             if s.y > 12:
                 return s.block('pit')
@@ -633,6 +645,8 @@ def extend(lv, world, id_, diff, extra, hints):
     secrets = [] if diff == 0 else [(old + extra // 4, 'cellar'), (old + 3 * extra // 5, 'house')]
     # Voz s mŕtvolami (C): jedno telo sa posadí (mimo katakomb, tam je krysí príliv).
     carts = [] if diff == 0 or world == 'catacombs' else [old + 2 * extra // 5]
+    # Krysí príliv (T) v každom leveli katakomb.
+    tides = [old + 2 * extra // 5] if world == 'catacombs' else []
     last = None
     while g.x < old + extra:
         kind = rng.choice([k for k in pool if k != last])
@@ -648,6 +662,11 @@ def extend(lv, world, id_, diff, extra, hints):
             g.put(g.x - 2, g.y - 1, 'h')
             g.flat(6, ember=False, rock=False)
             g.put(g.x - 2, g.y - 1, 'u')
+            g.flat(3, rock=False)
+        while tides and g.x >= tides[0]:
+            tides.pop(0)
+            g.flat(3, rock=False)
+            g.block('tide')
             g.flat(3, rock=False)
         while carts and g.x >= carts[0]:
             carts.pop(0)
@@ -666,7 +685,7 @@ def extend(lv, world, id_, diff, extra, hints):
             g.flat(2)
             g.put(g.x - 1, g.y - 1, 'L')
             g.flat(3)
-    assert not nests and not souls and not secrets and not carts, id_
+    assert not nests and not souls and not secrets and not carts and not tides, id_
     g.flat(6, ember=False, rock=False)
     assert g.put(g.x - 3, g.y - 1, 'E'), id_
     lv.w = g.x
@@ -686,9 +705,14 @@ def add_shrines(lv, id_):
         return sorted(x for r in lv.g for x, c in enumerate(r) if c == ch)
     start = col_of('P')[0]
     end = col_of('E')[0]
-    danger = set('^wcbxHV~gsSEC')
+    danger = set('^wcbxHV~gsSECT')
+
+    grates = col_of('T')
 
     def spot(x):
+        # Nie v ulici, kadiaľ sa valí krysí príliv.
+        if any(0 <= x - gx <= 22 for gx in grates):
+            return None
         for row in range(2, H):
             if lv.g[row][x] != '#':
                 continue

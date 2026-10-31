@@ -213,6 +213,22 @@ export class Sound {
             this.tone(this.note(n), 'sine', 0.06, 1.6, this.echo ?? this.master!, i * 0.12),
           );
           break;
+        case 'grateRumble':
+          // Pod mrežou to duní a pišťí.
+          this.noise(1.2, 120, 0.12);
+          [0.2, 0.5, 0.7].forEach((d) => this.noiseAt(d, 0.08, 3200, 0.03));
+          break;
+        case 'tideBurst':
+          // Mreža praskne, kanál sa vyvalí: kov, dunenie a stovky piskotov.
+          this.sweep(900, 120, 'square', 0.05, 0.3);
+          this.noise(2.5, 260, 0.2);
+          this.noise(3, 3500, 0.06, 'highpass');
+          for (let i = 0; i < 14; i++)
+            this.noiseAt(0.1 + i * 0.17, 0.07, 2600 + (i % 5) * 300, 0.035);
+          break;
+        case 'tideDrain':
+          this.noise(1.5, 200, 0.08);
+          break;
         case 'cartTwitch':
           // Vŕzganie voza: krátke trhané škrípanie dreva.
           this.sweep(320, 260, 'sawtooth', 0.025, 0.25);

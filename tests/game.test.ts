@@ -735,6 +735,42 @@ describe('nové svety', () => {
     expect(game.strayAt).toBeGreaterThan(1);
   });
 
+  it('krysí príliv: mreža duní, za lekárom sa pretrhne, ulicou dobehne, na debne je bezpečne', async () => {
+    const { TIDE_SPEED, RUN_SPEED } = await import('@/game/game');
+    expect(TIDE_SPEED).toBeGreaterThan(RUN_SPEED);
+    const street = [
+      ' PT                                      E',
+      '#########################################',
+    ];
+    const run1 = make(street);
+    const ev = run(run1, 6, { right: true });
+    expect(ev.findIndex((e) => e.type === 'grateRumble')).toBeLessThan(
+      ev.findIndex((e) => e.type === 'tideBurst'),
+    );
+    expect(ev.find((e) => e.type === 'died')).toMatchObject({ cause: 'rats' });
+    // Po smrti sa mreža zavrie a príliv sa dá skúsiť znova.
+    run(run1, 2);
+    expect(['sealed', 'rumble']).toContain(run1.tides[0]!.state);
+    expect(run1.tides[0]!.front).toBe(run1.tides[0]!.x);
+
+    const crate = [
+      ' PT        #                              E',
+      '###########################################',
+    ];
+    const safe = make(crate);
+    for (let t = 0; t < 3 && safe.tides[0]!.state !== 'flood'; t += DT)
+      safe.step(DT, { ...NO_INPUT, right: true });
+    expect(safe.tides[0]!.state).toBe('flood');
+    // Lekár vyskočí na debnu a počká.
+    safe.player.x = 11 * TILE + 4;
+    safe.player.y = 1 * TILE - PLAYER_H - 16;
+    safe.player.vx = 0;
+    const wait = run(safe, 7);
+    expect(wait.some((e) => e.type === 'died')).toBe(false);
+    expect(wait.some((e) => e.type === 'tideDrain')).toBe(true);
+    expect(safe.tides[0]!.state).toBe('gone');
+  });
+
   it('výbava z lekárne: ampulka, maska a okutá palica', () => {
     const rows = [' P                  E', '#####################'];
     const perks = { flask: 2, mask: 2, cane: 1 };

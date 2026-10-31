@@ -12,18 +12,27 @@ import { TILE, Tile, isGround, tileAt } from '@/game/level';
 
 /**
  * Jednoduchý bot: beží doprava a skáče pred stenou, priepasťou a tŕňmi; na pohyblivé
- * plošiny počká a nechá sa odviezť. Prízraky, potkany a nakazených vypína. Smolu dopĺňa len
+ * plošiny počká a nechá sa odviezť. Prízraky, potkany a nakazených vypína; pred krysím
+ * prílivom uteká na vyvýšené miesto a počká, kým opadne. Smolu dopĺňa len
  * s `refuel`; bez neho overí, že uhlíky a kaplnky po ceste stačia (počíta smrti v tme). Vráti, či došiel k vatre, najďalší stĺpec a počet pádov.
  */
 export function botRun(
   game: Game,
   seconds = 600,
   refuel = true,
-): { done: boolean; col: number; deaths: number; dark: number; minOil: number } {
+): {
+  done: boolean;
+  col: number;
+  deaths: number;
+  dark: number;
+  minOil: number;
+  rats: number;
+} {
   const dt = 1 / 60;
   let hold = 0;
   let best = 0;
   let dark = 0;
+  let rats = 0;
   let minOil = game.oil;
   const level = game.level;
   const windy = hasWind(level.world);
@@ -55,9 +64,19 @@ export function botRun(
     const step = (input: Partial<Input>) => {
       for (const e of game.step(dt, { ...NO_INPUT, ...input }))
         if (e.type === 'died' && e.cause === 'dark') dark++;
+        else if (e.type === 'died' && e.cause === 'rats') rats++;
       minOil = Math.min(minOil, game.oil);
       best = Math.max(best, Math.floor(p.x / TILE));
     };
+
+    // Krysí príliv: na vyvýšenom mieste počká, kým opadne (ako hráč).
+    const tide = game.tides.find(
+      (t) => (t.state === 'flood' || t.state === 'drain') && p.x > t.x && p.x < t.x + 26 * TILE,
+    );
+    if (tide && p.onGround && feetY < tide.y - TILE) {
+      step({});
+      continue;
+    }
 
     // Preskočil vatru: vráti sa k nej pešo.
     if (p.x > level.exit.x + 8 && p.onGround) {
@@ -191,5 +210,5 @@ export function botRun(
       ((overMover && p.vy > 40) || [0, 1, 2, 3, 4].some((d) => landable(under, feet + d)));
     step({ right: !brake, left: brake && p.vx > 20, jump });
   }
-  return { done: game.state === 'done', col: best, deaths: game.deaths, dark, minOil };
+  return { done: game.state === 'done', col: best, deaths: game.deaths, dark, minOil, rats };
 }
