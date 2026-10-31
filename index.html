@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#0d0a08" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>Miasma</title>
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <script type="module" crossorigin src="./assets/index-BYiTQblA.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/CanvasPool-i-mSKVTp.js">
+    <link rel="modulepreload" crossorigin href="./assets/canvasUtils-CHO4UKAx.js">
+    <link rel="modulepreload" crossorigin href="./assets/RenderTargetSystem-I0KICUWf.js">
+    <link rel="modulepreload" crossorigin href="./assets/getTextureBatchBindGroup-B9ObWncS.js">
+    <link rel="modulepreload" crossorigin href="./assets/getTexelRangeRects-D2xaDOMz.js">
+    <link rel="stylesheet" crossorigin href="./assets/index-jhR0g0n_.css">
+  </head>
+  <body>
+    <div id="game"></div>
+    <div id="dread"></div>
+    <div id="sick"></div>
+    <div id="hurt"></div>
+    <div id="hud" hidden>
+      <div class="hud-left">
+        <div class="oil">
+          <span class="oil-icon"></span>
+          <div class="oil-bar"><div class="oil-fill"></div></div>
+        </div>
+        <div class="infection" hidden>
+          <span class="infection-icon">☣</span>
+          <div class="infection-bar"><div class="infection-fill"></div></div>
+        </div>
+        <div class="bell" title="Plague bell">
+          <svg class="bell-icon" viewBox="0 0 16 16" aria-hidden="true">
+            <path
+              d="M8 1.5c.7 0 1 .5 1 1v.6c2.2.5 3.4 2.4 3.4 4.9v2.6l1.4 1.9H2.2l1.4-1.9V8c0-2.5 1.2-4.4 3.4-4.9v-.6c0-.5.3-1 1-1zM6.4 13.6h3.2a1.6 1.6 0 0 1-3.2 0z"
+            />
+          </svg>
+          <div class="bell-bar"><div class="bell-fill"></div></div>
+        </div>
+        <div class="counts">
+          <span class="nests"></span> <span class="fireflies"></span> <span class="crystals"></span>
+          <span class="herbs"></span> <span class="coins-found"></span>
+          <span class="key-icon"></span>
+        </div>
+      </div>
+      <div class="hud-right">
+        <div class="level-label"></div>
+      </div>
+      <button class="pause-btn" aria-label="Pause">❚❚</button>
+    </div>
+    <div id="hint" hidden></div>
+    <div id="banner"></div>
+    <div id="toast"></div>
+    <div id="whisper"></div>
+    <div id="touch" hidden>
+      <div class="pad-left">
+        <button data-action="left" aria-label="Left">◀</button>
+        <button data-action="right" aria-label="Right">▶</button>
+        <button data-action="down" class="shield" aria-label="Hide the torch">◐</button>
+        <button data-action="herb" class="herb-btn" aria-label="Use a herb">❦</button>
+      </div>
+      <div class="pad-right">
+        <button data-action="flare" class="flare" aria-label="Flare the torch">✦</button>
+        <button data-action="spark" class="spark" aria-label="Spark">✸</button>
+        <button data-action="cane" class="cane" aria-label="Strike with the cane">⚚</button>
+        <button data-action="jump" class="jump" aria-label="Jump">⤒</button>
+      </div>
+    </div>
+    <section id="start" class="screen">
+      <canvas class="title-bg"></canvas>
+      <h1 class="logo">Miasma</h1>
+      <p class="tagline"></p>
+      <div class="langs">
+        <button data-lang="en">EN</button>
+        <button data-lang="sk">SK</button>
+        <button data-lang="cs">CZ</button>
+      </div>
+      <button class="continue big" hidden></button>
+      <button class="play big"></button>
+      <button class="new-game" hidden></button>
+      <p class="controls"></p>
+    </section>
+    <section id="paused" class="screen" hidden>
+      <h1 class="paused-title"></h1>
+      <button class="resume big"></button>
+      <button class="restart"></button>
+      <button class="sound-toggle"></button>
+      <button class="to-menu"></button>
+      <p class="paused-hint"></p>
+    </section>
+    <section id="done" class="screen" hidden>
+      <h1 class="done-title"></h1>
+      <p class="done-level"></p>
+      <p class="done-stats"></p>
+      <p class="done-world" hidden></p>
+      <div class="shop">
+        <h2 class="shop-title"></h2>
+        <p class="shop-coins"></p>
+        <p class="shop-earned"></p>
+        <div class="shop-items"></div>
+      </div>
+      <button class="next big"></button>
+      <button class="replay"></button>
+    </section>
+    <section id="victory" class="screen" hidden>
+      <h1 class="victory-title"></h1>
+      <p class="victory-story"></p>
+      <p class="victory-hooded"></p>
+      <p class="victory-secret" hidden></p>
+      <p class="victory-stats"></p>
+      <p class="coming-soon"></p>
+      <button class="victory-menu"></button>
+    </section>
+    <div id="diary" hidden>
+      <div class="diary-page">
+        <h2 class="diary-title"></h2>
+        <p class="diary-text"></p>
+        <p class="diary-close"></p>
+      </div>
+    </div>
+    <div id="rotate"><p class="rotate-text"></p></div>
+  </body>
+</html>
