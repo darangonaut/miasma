@@ -13,6 +13,10 @@ Temná plošinovka pre dospelých (morový lekár s fakľou), postavená na engi
   morový zvon (`updateBell`, besnenie), preživší (`u`) a byliny v brašni (Q), kľúče/dvere/groše (`k`, `D`, `$`)
   v pivniciach a domoch, lekáreň a výbava (`src/game/save.ts`), denník a tri konce (`src/game/story.ts`).
   Staršie prvky: miazma (`~`), barikády (`x`), ukrytie fakle (↓).
+- Prekvapenia (najviac raz za level, vždy s varovaním): voz s mŕtvolami (`C`, `updateCarts`; kto sa posadí,
+  určuje `cartHoldsSurvivor`, do konca sa ráta cez `survivorTotal`), zvon mimo poradia (`updateStray`, strnutie
+  `still`), krysí príliv z mreže (`T`, `updateTides`, blok `tide` s debnou a strechou s kaplnkou; bot na streche
+  počká) a hlas z denníka (`updateWhisper`, postava v kapucni `hooded`, vety `whisper1–8`, odhalenie `endHooded`).
 - Obťažnosť: smrť na jeden zásah, prízrak pred výpadom varuje (`windup`), nakazení (`g`) chodia po zemi.
   V kóde ostali názvy z Lumenu: olej = smola fakle, svetluška = uhlík, kryštál = strana denníka, lampa = kaplnka,
   vatra = hranica, tieň = prízrak, cencúľ = padajúce murivo, huba = plachta.

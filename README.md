@@ -17,6 +17,13 @@ Miasma started as the grim older sibling of [Lumen](https://github.com/darangona
 - **Cellars and locked houses.** Drop into cellars under the street for keys and coins. A key opens a house door with loot behind it, while the main path goes over the roof.
 - **A story with three endings.** Sixteen pages of the doctor’s diary tell what the council really wanted and what grows under his cloak. How the game ends depends on how many people you saved.
 
+And the city keeps a few surprises (each comes at most once a level, with a fair warning):
+
+- **The death cart.** One of the shrouded bodies starts to twitch as you come closer — and then it sits up. Sometimes it is a survivor begging for a herb, sometimes it is not alive at all.
+- **A bell out of turn.** Without any warning a cracked bell tolls and the whole city holds its breath: wraiths, rats and the infected freeze, the rain hangs in the air. When the world moves again, the infected go looking for the spot where you stood.
+- **The rat tide.** In the catacombs a sewer grate rumbles under your feet. Once you pass it, it bursts and a flood of rats pours down the street behind you, faster than you can run. Light will not stop it. Only high ground will.
+- **A voice from the diary.** Halfway through a quarter someone whispers into your ear, and at the edge of your light, behind your back, stands a hooded figure with a beaked mask. Turn around and it is gone. The last pages tell who it is.
+
 Miasma also keeps the hard core of the original:
 
 - **One touch kills.** Wraiths, the infected, rats and iron spikes give no second chance.
@@ -34,16 +41,23 @@ Miasma also keeps the hard core of the original:
 <td><img src="docs/screenshots/survivor.png" alt="A survivor"><br><sub>A survivor begs for a herb: their life or yours?</sub></td>
 </tr>
 <tr>
+<td><img src="docs/screenshots/cart.png" alt="The death cart"><br><sub>A body on the death cart sat up — and it is alive</sub></td>
+<td><img src="docs/screenshots/hooded.png" alt="The hooded figure"><br><sub>A whisper, and a hooded figure behind your back</sub></td>
+</tr>
+<tr>
 <td><img src="docs/screenshots/miasma.png" alt="Miasma"><br><sub>Catacombs: green miasma and the infection rising</sub></td>
+<td><img src="docs/screenshots/tide.png" alt="The rat tide"><br><sub>The rat tide: red eyes in the street below the roof</sub></td>
+</tr>
+<tr>
 <td><img src="docs/screenshots/rats.png" alt="Rats"><br><sub>Rats wait at the edge of the light</sub></td>
-</tr>
-<tr>
 <td><img src="docs/screenshots/diary.png" alt="Diary page"><br><sub>A page from the plague doctor’s diary</sub></td>
-<td><img src="docs/screenshots/shop.png" alt="Apothecary"><br><sub>The apothecary after a level</sub></td>
 </tr>
 <tr>
+<td><img src="docs/screenshots/shop.png" alt="Apothecary"><br><sub>The apothecary after a level</sub></td>
 <td><img src="docs/screenshots/pits.png" alt="Plague Pits"><br><sub>Plague Pits: wind, graves and a sickly moon</sub></td>
-<td><img src="docs/screenshots/cathedral.png" alt="The Cathedral"><br><sub>The Cathedral: arches in the dark</sub></td>
+</tr>
+<tr>
+<td colspan="2" align="center"><img src="docs/screenshots/cathedral.png" alt="The Cathedral" width="50%"><br><sub>The Cathedral: arches in the dark</sub></td>
 </tr>
 </table>
 
@@ -52,7 +66,7 @@ Miasma also keeps the hard core of the original:
 |     | World                  | What awaits you                                                 |
 | --- | ---------------------- | --------------------------------------------------------------- |
 | 1   | **Quarantine Quarter** | rain, a blood moon, rooftops, barricades, the first infected    |
-| 2   | **Catacombs**          | sewage, slimy stones, rat nests, miasma rising from the bones   |
+| 2   | **Catacombs**          | sewage, slimy stones, rat nests, miasma, the rat tide           |
 | 3   | **Plague Pits**        | an open cemetery, wind in gusts, lightning, great wraiths       |
 | 4   | **The Cathedral**      | hanging platforms, the bell tower, the crypt and the great pyre |
 
